@@ -1,0 +1,182 @@
+import { defineStore } from 'pinia'
+
+const themes = {
+  deepsea: {
+    primary: '#1e4d7b',
+    primaryLight: '#3d7ab5',
+    primaryDark: '#0f2c4a',
+    success: '#0ea5e9',
+    warning: '#f59e0b',
+    danger: '#ef4444',
+    textPrimary: '#1e4d7b',
+    textSecondary: '#475569',
+    textMuted: '#94a3b8',
+    surfaceTint: '#e0f2fe',
+    accent: '#06b6d4',
+    sidebarBg: '#f8fafc',
+    sidebarText: '#475569',
+    sidebarHover: '#e2e8f0',
+    sidebarActive: '#1e4d7b',
+    logoGradient: 'linear-gradient(135deg, #1e4d7b 0%, #3d7ab5 100%)',
+  },
+  teallake: {
+    primary: '#0d9488',
+    primaryLight: '#2dd4bf',
+    primaryDark: '#0f766e',
+    success: '#10b981',
+    warning: '#f59e0b',
+    danger: '#ef4444',
+    textPrimary: '#0f766e',
+    textSecondary: '#334155',
+    textMuted: '#64748b',
+    surfaceTint: '#ccfbf1',
+    accent: '#06b6d4',
+    sidebarBg: '#f8fafc',
+    sidebarText: '#334155',
+    sidebarHover: '#e0f2f1',
+    sidebarActive: '#0d9488',
+    logoGradient: 'linear-gradient(135deg, #0d9488 0%, #2dd4bf 100%)',
+  },
+  lilac: {
+    primary: '#8b5cf6',
+    primaryLight: '#a78bfa',
+    primaryDark: '#6d28d9',
+    success: '#10b981',
+    warning: '#f59e0b',
+    danger: '#ef4444',
+    textPrimary: '#6d28d9',
+    textSecondary: '#6366f1',
+    textMuted: '#94a3b8',
+    surfaceTint: '#ede9fe',
+    accent: '#ec4899',
+    sidebarBg: '#f8fafc',
+    sidebarText: '#6366f1',
+    sidebarHover: '#ede9fe',
+    sidebarActive: '#8b5cf6',
+    logoGradient: 'linear-gradient(135deg, #8b5cf6 0%, #a78bfa 100%)',
+  },
+  rosebean: {
+    primary: '#d4756a',
+    primaryLight: '#e8a096',
+    primaryDark: '#b95a50',
+    success: '#10b981',
+    warning: '#f59e0b',
+    danger: '#dc2626',
+    textPrimary: '#b95a50',
+    textSecondary: '#92400e',
+    textMuted: '#a8a29e',
+    surfaceTint: '#fef2f2',
+    accent: '#f97316',
+    sidebarBg: '#fefefe',
+    sidebarText: '#92400e',
+    sidebarHover: '#fef2f2',
+    sidebarActive: '#d4756a',
+    logoGradient: 'linear-gradient(135deg, #d4756a 0%, #e8a096 100%)',
+  },
+  brickred: {
+    primary: '#b45309',
+    primaryLight: '#d97706',
+    primaryDark: '#92400e',
+    success: '#10b981',
+    warning: '#fbbf24',
+    danger: '#dc2626',
+    textPrimary: '#92400e',
+    textSecondary: '#78350f',
+    textMuted: '#a8a29e',
+    surfaceTint: '#fffbeb',
+    accent: '#f97316',
+    sidebarBg: '#fefefe',
+    sidebarText: '#78350f',
+    sidebarHover: '#fffbeb',
+    sidebarActive: '#b45309',
+    logoGradient: 'linear-gradient(135deg, #b45309 0%, #d97706 100%)',
+  },
+  neutralgray: {
+    primary: '#64748b',
+    primaryLight: '#94a3b8',
+    primaryDark: '#475569',
+    success: '#64748b',
+    warning: '#94a3b8',
+    danger: '#ef4444',
+    textPrimary: '#334155',
+    textSecondary: '#64748b',
+    textMuted: '#94a3b8',
+    surfaceTint: '#f1f5f9',
+    accent: '#94a3b8',
+    sidebarBg: '#f8fafc',
+    sidebarText: '#64748b',
+    sidebarHover: '#f1f5f9',
+    sidebarActive: '#64748b',
+    logoGradient: 'linear-gradient(135deg, #64748b 0%, #94a3b8 100%)',
+  },
+  olivegreen: {
+    primary: '#65a30d',
+    primaryLight: '#84cc16',
+    primaryDark: '#4d7c0f',
+    success: '#22c55e',
+    warning: '#eab308',
+    danger: '#ef4444',
+    textPrimary: '#4d7c0f',
+    textSecondary: '#65a30d',
+    textMuted: '#a3e635',
+    surfaceTint: '#f0fdf4',
+    accent: '#10b981',
+    sidebarBg: '#f8fafc',
+    sidebarText: '#65a30d',
+    sidebarHover: '#f0fdf4',
+    sidebarActive: '#65a30d',
+    logoGradient: 'linear-gradient(135deg, #65a30d 0%, #84cc16 100%)',
+  },
+  warmgold: {
+    primary: '#ea580c',
+    primaryLight: '#fb923c',
+    primaryDark: '#c2410c',
+    success: '#f59e0b',
+    warning: '#fbbf24',
+    danger: '#dc2626',
+    textPrimary: '#c2410c',
+    textSecondary: '#ea580c',
+    textMuted: '#fb923c',
+    surfaceTint: '#fff7ed',
+    accent: '#f97316',
+    sidebarBg: '#fefefe',
+    sidebarText: '#ea580c',
+    sidebarHover: '#fff7ed',
+    sidebarActive: '#ea580c',
+    logoGradient: 'linear-gradient(135deg, #ea580c 0%, #fb923c 100%)',
+  },
+}
+
+export const useAppStore = defineStore('app', {
+  state: () => ({
+    ...themes.deepsea,
+    currentTheme: 'deepsea',
+  }),
+  actions: {
+    setTheme(themeName) {
+      const theme = themes[themeName]
+      if (theme) {
+        Object.keys(theme).forEach(key => {
+          this[key] = theme[key]
+        })
+        this.currentTheme = themeName
+      }
+    },
+    setPrimary(color) {
+      this.primary = color
+    },
+    setSidebarColor(color) {
+      this.sidebarBg = color
+    },
+    setSidebarTextColor(color) {
+      this.sidebarText = color
+    },
+    setSidebarHoverColor(color) {
+      this.sidebarHover = color
+    },
+    resetColors() {
+      this.setTheme('deepsea')
+    },
+  },
+  persist: true,
+})
