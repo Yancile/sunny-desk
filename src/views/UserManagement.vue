@@ -32,7 +32,6 @@
             <tr>
               <th>ID</th>
               <th>用户名</th>
-              <th>密码</th>
               <th>角色</th>
               <th>状态</th>
               <th>创建时间</th>
@@ -43,7 +42,6 @@
             <tr v-for="user in users" :key="user.id" class="table-row">
               <td>{{ user.id }}</td>
               <td>{{ user.username }}</td>
-              <td>{{ user.password || '-' }}</td>
               <td>
                 <span class="role-tag" :class="user.role">
                   {{ user.role === 'admin' ? '管理员' : user.role === 'teacher' ? '教师' : '学生' }}

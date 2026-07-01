@@ -35,6 +35,8 @@ router.get('/list', authenticateToken, (req, res) => {
     filteredUsers = filteredUsers.filter(u => u.role === role);
   }
 
+  filteredUsers.sort((a, b) => b.id - a.id);
+
   const total = filteredUsers.length;
   const start = (pageNum - 1) * pageSize;
   const end = start + pageSize;
