@@ -3,7 +3,7 @@
     <div class="sidebar" :class="{ collapsed: sidebarCollapsed }" :style="sidebarStyle">
       <div class="sidebar-logo">
         <i class="layui-icon layui-icon-home"></i>
-        <span v-show="!sidebarCollapsed">用户管理系统</span>
+        <span v-show="!sidebarCollapsed">个人工作管理</span>
       </div>
       <div class="sidebar-user" v-show="!sidebarCollapsed">
         <div class="user-avatar">
@@ -17,13 +17,18 @@
         </div>
       </div>
       <ul class="sidebar-menu">
-        <li v-for="menu in menuList" :key="menu.path" class="menu-item" :class="{ active: currentPath === menu.path }"
+        <li v-for="menu in allMenus" :key="menu.path" class="menu-item" :class="{ active: currentPath === menu.path }"
           @click="navigateTo(menu.path)" :data-title="menu.title">
           <i :class="menu.icon" class="menu-icon"></i>
           <span class="menu-text">{{ menu.title }}</span>
         </li>
       </ul>
       <div class="sidebar-footer">
+        <li class="menu-item profile-item" :class="{ active: currentPath === '/profile' }"
+          @click="navigateTo('/profile')" data-title="个人中心">
+          <i class="layui-icon layui-icon-username menu-icon"></i>
+          <span class="menu-text">个人中心</span>
+        </li>
         <button class="logout-btn" @click="showLogoutConfirm = true">
           <i class="layui-icon layui-icon-logout"></i>
           <span v-show="!sidebarCollapsed">退出登录</span>
@@ -88,7 +93,6 @@ const userStore = useUserStore()
 const appStore = useAppStore()
 
 const currentPath = computed(() => route.path)
-const currentTime = ref('')
 const showLogoutConfirm = ref(false)
 const sidebarCollapsed = ref(false)
 
@@ -100,7 +104,6 @@ const updateTime = () => {
   const hour = String(now.getHours()).padStart(2, '0')
   const minute = String(now.getMinutes()).padStart(2, '0')
   const second = String(now.getSeconds()).padStart(2, '0')
-  currentTime.value = `${year}-${month}-${day} ${hour}:${minute}:${second}`
 }
 
 let timer = null
@@ -114,11 +117,6 @@ onUnmounted(() => {
   if (timer) {
     clearInterval(timer)
   }
-})
-
-const currentTitle = computed(() => {
-  const matched = route.matched.filter(item => item.meta && item.meta.title)
-  return matched.length > 0 ? matched[matched.length - 1].meta.title : '首页'
 })
 
 const breadcrumbs = computed(() => {
@@ -155,18 +153,29 @@ const sidebarStyle = computed(() => ({
   '--text-muted': appStore.textMuted,
 }))
 
-const menuList = computed(() => {
+const allMenus = computed(() => {
   const baseMenus = [
-    { path: '/', title: '首页', icon: 'layui-icon layui-icon-home' },
-    { path: '/profile', title: '个人信息', icon: 'layui-icon layui-icon-username' },
-    { path: '/system-settings', title: '系统设置', icon: 'layui-icon layui-icon-set' },
+    { path: '/', title: '工作台', icon: 'layui-icon layui-icon-home' },
+    { path: '/todo', title: '待办事项', icon: 'layui-icon layui-icon-list' },
+    { path: '/goals', title: '长期目标', icon: 'layui-icon layui-icon-flag' },
+    { path: '/memo', title: '备忘录', icon: 'layui-icon layui-icon-note' },
+    { path: '/schedule', title: '日程管理', icon: 'layui-icon layui-icon-calendar' },
+    { path: '/diary', title: '日记', icon: 'layui-icon layui-icon-file' },
+    { path: '/notes', title: '笔记本', icon: 'layui-icon layui-icon-read' },
+    { path: '/bookmarks', title: '网站导航', icon: 'layui-icon layui-icon-link' },
+    { path: '/pomodoro', title: '番茄钟', icon: 'layui-icon layui-icon-clock' },
   ]
-  const adminMenus = [
-    { path: '/user-management', title: '用户管理', icon: 'layui-icon layui-icon-user' },
-    { path: '/statistics', title: '统计报表', icon: 'layui-icon layui-icon-chart' },
-  ]
-  const isAdmin = userStore.userInfo.role === 'admin'
-  return isAdmin ? [...baseMenus, ...adminMenus] : baseMenus
+
+  if (userStore.userInfo.role === 'admin') {
+    baseMenus.push(
+      { path: '/user-management', title: '用户管理', icon: 'layui-icon layui-icon-user' },
+      { path: '/dashboard', title: '数据看板', icon: 'layui-icon layui-icon-chart' },
+      { path: '/statistics', title: '统计报表', icon: 'layui-icon layui-icon-bar-chart' },
+      { path: '/system-settings', title: '系统设置', icon: 'layui-icon layui-icon-set' }
+    )
+  }
+
+  return baseMenus
 })
 
 const navigateTo = (path) => {
@@ -275,23 +284,36 @@ const confirmLogout = () => {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 14px 20px;
+  padding: 12px 20px;
   cursor: pointer;
   font-size: 14px;
   color: var(--sidebar-text-color, #475569);
   transition: all 0.25s ease;
-  border-radius: 12px;
-  margin-bottom: 6px;
+  border-radius: 10px;
+  margin-bottom: 4px;
   font-weight: 500;
 }
 
+.profile-item {
+  width: 100%;
+  margin-bottom: 8px;
+}
+
 .sidebar.collapsed .menu-item {
-  padding: 14px 10px;
+  padding: 12px 10px;
   justify-content: center;
-  border-radius: 10px;
+  border-radius: 8px;
+}
+
+.sidebar.collapsed .group-menu .menu-item {
+  padding-left: 10px;
 }
 
 .sidebar.collapsed .menu-text {
+  display: none;
+}
+
+.sidebar.collapsed .group-title {
   display: none;
 }
 
@@ -432,12 +454,6 @@ const confirmLogout = () => {
   gap: 8px;
 }
 
-.header-title {
-  font-size: 18px;
-  font-weight: 600;
-  color: var(--text-primary, #334155);
-}
-
 .breadcrumb {
   display: flex;
   align-items: center;
@@ -469,17 +485,6 @@ const confirmLogout = () => {
 .breadcrumb-text.active {
   color: var(--primary-color, #1e4d7b);
   font-weight: 500;
-}
-
-.header-right {
-  font-size: 14px;
-  color: #64748b;
-}
-
-.current-time {
-  display: flex;
-  align-items: center;
-  gap: 8px;
 }
 
 .page-content {
