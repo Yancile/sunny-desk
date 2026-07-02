@@ -1,9 +1,10 @@
 const express = require('express');
 const jwt = require('jsonwebtoken');
+const bcrypt = require('bcryptjs');
 const router = express.Router();
 const userData = require('../data/users');
 
-const SECRET_KEY = 'self-manage-system-secret-key-2024';
+const SECRET_KEY = process.env.JWT_SECRET_KEY || 'self-manage-system-secret-key-2024';
 
 const authenticateToken = (req, res, next) => {
   const authHeader = req.headers['authorization'];
@@ -54,7 +55,7 @@ router.get('/list', authenticateToken, (req, res) => {
   });
 });
 
-router.post('/add', authenticateToken, (req, res) => {
+router.post('/add', authenticateToken, async (req, res) => {
   if (req.user.role !== 'admin') {
     return res.status(403).json({ code: 403, message: '无权限执行此操作' });
   }
@@ -69,10 +70,12 @@ router.post('/add', authenticateToken, (req, res) => {
     return res.status(400).json({ code: 400, message: '用户名已存在' });
   }
 
+  const hashedPassword = await bcrypt.hash(password, 10);
+
   const newUser = {
     id: userData.getNextId(),
     username,
-    password,
+    password: hashedPassword,
     email: email || '',
     role: role || 'student',
     phone: phone || '',
@@ -83,10 +86,11 @@ router.post('/add', authenticateToken, (req, res) => {
 
   userData.addUser(newUser);
 
-  res.json({ code: 200, message: '添加成功', data: newUser });
+  const { password: _, ...userInfo } = newUser;
+  res.json({ code: 200, message: '添加成功', data: userInfo });
 });
 
-router.put('/update', authenticateToken, (req, res) => {
+router.put('/update', authenticateToken, async (req, res) => {
   if (req.user.role !== 'admin') {
     return res.status(403).json({ code: 403, message: '无权限执行此操作' });
   }
@@ -110,12 +114,13 @@ router.put('/update', authenticateToken, (req, res) => {
   };
 
   if (password) {
-    updateData.password = password;
+    updateData.password = await bcrypt.hash(password, 10);
   }
 
   const updatedUser = userData.updateUser(id, updateData);
 
-  res.json({ code: 200, message: '更新成功', data: updatedUser });
+  const { password: _, ...userInfo } = updatedUser;
+  res.json({ code: 200, message: '更新成功', data: userInfo });
 });
 
 router.delete('/delete/:id', authenticateToken, (req, res) => {
@@ -188,7 +193,6 @@ router.put('/profile', authenticateToken, (req, res) => {
     return res.status(404).json({ code: 404, message: '用户不存在' });
   }
 
-  // 检查用户名是否已被其他用户使用
   if (username) {
     const existingUser = userData.getUserByUsername(username);
     if (existingUser && existingUser.id !== req.user.id) {
@@ -207,8 +211,7 @@ router.put('/profile', authenticateToken, (req, res) => {
   res.json({ code: 200, message: '修改成功', data: userInfo });
 });
 
-// 修改密码
-router.put('/change-password', authenticateToken, (req, res) => {
+router.put('/change-password', authenticateToken, async (req, res) => {
   const { oldPassword, newPassword } = req.body;
   const user = userData.getUserById(req.user.id);
 
@@ -216,13 +219,13 @@ router.put('/change-password', authenticateToken, (req, res) => {
     return res.status(404).json({ code: 404, message: '用户不存在' });
   }
 
-  // 验证旧密码
-  if (user.password !== oldPassword) {
+  const isOldPasswordValid = await bcrypt.compare(oldPassword, user.password);
+  if (!isOldPasswordValid) {
     return res.status(400).json({ code: 400, message: '旧密码不正确' });
   }
 
-  // 更新密码
-  userData.updateUser(req.user.id, { password: newPassword });
+  const hashedNewPassword = await bcrypt.hash(newPassword, 10);
+  userData.updateUser(req.user.id, { password: hashedNewPassword });
 
   res.json({ code: 200, message: '密码修改成功' });
 });

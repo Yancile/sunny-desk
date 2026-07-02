@@ -1,11 +1,12 @@
 const express = require('express');
 const jwt = require('jsonwebtoken');
+const bcrypt = require('bcryptjs');
 const router = express.Router();
 const userData = require('../data/users');
 
-const SECRET_KEY = 'self-manage-system-secret-key-2024';
+const SECRET_KEY = process.env.JWT_SECRET_KEY || 'self-manage-system-secret-key-2024';
 
-router.post('/login', (req, res) => {
+router.post('/login', async (req, res) => {
   const { username, password } = req.body;
 
   if (!username || !password) {
@@ -14,12 +15,18 @@ router.post('/login', (req, res) => {
 
   const user = userData.getUserByUsername(username);
 
-  if (!user || user.password !== password) {
+  if (!user) {
     return res.status(401).json({ code: 401, message: '用户名或密码错误' });
   }
 
   if (user.status === 0) {
     return res.status(401).json({ code: 401, message: '该用户已被禁用' });
+  }
+
+  const isPasswordValid = await bcrypt.compare(password, user.password);
+
+  if (!isPasswordValid) {
+    return res.status(401).json({ code: 401, message: '用户名或密码错误' });
   }
 
   const token = jwt.sign(

@@ -3,11 +3,10 @@ import { useUserStore } from '../stores/modules/user'
 import { layer } from '@layui/layui-vue'
 
 const service = axios.create({
-  baseURL: '/api',
+  baseURL: import.meta.env.VITE_API_URL,
   timeout: 10000,
 })
 
-// 请求拦截器
 service.interceptors.request.use(
   (config) => {
     const userStore = useUserStore()
@@ -21,7 +20,6 @@ service.interceptors.request.use(
   }
 )
 
-// 响应拦截器
 service.interceptors.response.use(
   (response) => {
     const res = response.data

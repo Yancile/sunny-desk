@@ -1,0 +1,30 @@
+const bcrypt = require('bcryptjs');
+
+const users = [
+  { id: 1, username: 'admin', password: 'admin123', role: 'admin', email: 'admin@example.com', avatar: '', phone: '13800138000', createTime: '2024-01-01', status: 1 },
+  { id: 2, username: 'student1', password: '123456', role: 'student', email: 'student1@example.com', avatar: '', phone: '13800138001', createTime: '2024-01-02', status: 1 },
+  { id: 3, username: 'student2', password: '123456', role: 'student', email: 'student2@example.com', avatar: '', phone: '13800138002', createTime: '2024-01-03', status: 0 },
+  { id: 4, username: 'student3', password: '123456', role: 'student', email: 'student3@example.com', avatar: '', phone: '13800138003', createTime: '2024-01-04', status: 1 },
+  { id: 5, username: 'student4', password: '123456', role: 'student', email: 'student4@example.com', avatar: '', phone: '13800138004', createTime: '2024-01-05', status: 1 },
+  { id: 6, username: 'student5', password: '123456', role: 'student', email: 'student5@example.com', avatar: '', phone: '13800138005', createTime: '2024-01-06', status: 0 },
+  { id: 7, username: 'teacher1', password: '123456', role: 'teacher', email: 'teacher1@example.com', avatar: '', phone: '13800138006', createTime: '2024-01-07', status: 1 },
+  { id: 8, username: 'student6', password: '123456', role: 'student', email: 'student6@example.com', avatar: '', phone: '13800138007', createTime: '2024-01-08', status: 1 },
+  { id: 9, username: 'student7', password: '123456', role: 'student', email: 'student7@example.com', avatar: '', phone: '13800138008', createTime: '2024-01-09', status: 1 },
+  { id: 10, username: 'student8', password: '123456', role: 'student', email: 'student8@example.com', avatar: '', phone: '13800138009', createTime: '2024-01-10', status: 0 },
+  { id: 11, username: 'teacher2', password: '123456', role: 'teacher', email: 'teacher2@example.com', avatar: '', phone: '13800138010', createTime: '2024-01-11', status: 1 },
+  { id: 12, username: 'student9', password: '123456', role: 'student', email: 'student9@example.com', avatar: '', phone: '13800138011', createTime: '2024-01-12', status: 1 },
+];
+
+(async () => {
+  const hashedUsers = await Promise.all(users.map(async (user) => ({
+    ...user,
+    password: await bcrypt.hash(user.password, 10)
+  })));
+
+  console.log('const users = [');
+  hashedUsers.forEach((user, index) => {
+    const comma = index === hashedUsers.length - 1 ? '' : ',';
+    console.log(`  { id: ${user.id}, username: '${user.username}', password: '${user.password}', role: '${user.role}', email: '${user.email}', avatar: '', phone: '${user.phone}', createTime: '${user.createTime}', status: ${user.status} }${comma}`);
+  });
+  console.log('];');
+})();
