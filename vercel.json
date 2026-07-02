@@ -1,0 +1,40 @@
+{
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist",
+  "functions": {
+    "api/auth/login.js": {
+      "runtime": "@vercel/node@3.2.18"
+    },
+    "api/user/list.js": {
+      "runtime": "@vercel/node@3.2.18"
+    },
+    "api/user/add.js": {
+      "runtime": "@vercel/node@3.2.18"
+    },
+    "api/user/update.js": {
+      "runtime": "@vercel/node@3.2.18"
+    },
+    "api/user/delete.js": {
+      "runtime": "@vercel/node@3.2.18"
+    },
+    "api/user/status.js": {
+      "runtime": "@vercel/node@3.2.18"
+    },
+    "api/user/statistics.js": {
+      "runtime": "@vercel/node@3.2.18"
+    },
+    "api/user/profile.js": {
+      "runtime": "@vercel/node@3.2.18"
+    }
+  },
+  "routes": [
+    {
+      "src": "/api/(.*)",
+      "dest": "/api/$1"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/index.html"
+    }
+  ]
+}
