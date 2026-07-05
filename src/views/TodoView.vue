@@ -288,8 +288,9 @@
 </template>
 
 <script setup>
-import { ref, reactive } from 'vue'
+import { ref, reactive, computed, watch, onMounted } from 'vue'
 import { useAppStore } from '@/stores/modules/app'
+import { dataManager } from '@/utils/dataManager'
 import { layer } from '@layui/layui-vue'
 
 const appStore = useAppStore()
@@ -299,6 +300,7 @@ const showAddModal = ref(false)
 const editingTask = ref(null)
 const editingId = ref(null)
 const editData = reactive({ title: '', quadrant: 'important-not-urgent' })
+const tasks = ref([])
 
 const quadrants = [
   { value: 'important-not-urgent', label: '重要而不紧急' },
@@ -322,25 +324,6 @@ const categories = [
   { value: 'other', label: '其他' }
 ]
 
-const tasks = ref([
-  {
-    id: 1,
-    title: '网页设计',
-    description: '',
-    quadrant: 'important-not-urgent',
-    status: 'completed',
-    deadline: ''
-  },
-  {
-    id: 2,
-    title: '学习vue',
-    description: '',
-    quadrant: 'important-urgent',
-    status: 'pending',
-    deadline: ''
-  }
-])
-
 const formData = reactive({
   title: '',
   description: '',
@@ -350,6 +333,10 @@ const formData = reactive({
 })
 
 const themeStyle = ref({})
+
+const loadTasks = () => {
+  tasks.value = dataManager.todos.getAll()
+}
 
 const getQuadrantKey = (urgent, important) => {
   return urgent ? (important ? 'important-urgent' : 'not-important-urgent') : (important ? 'important-not-urgent' : 'not-important-not-urgent')
@@ -381,26 +368,26 @@ const toggleHideCompleted = (key) => {
 }
 
 const toggleTaskStatus = (id) => {
-  const task = tasks.value.find(t => t.id === id)
-  if (task) {
-    task.status = task.status === 'completed' ? 'pending' : 'completed'
-    if (task.status === 'completed') {
-      layer.msg('任务已完成', { icon: 1 })
-    }
+  const newStatus = dataManager.todos.toggleStatus(id)
+  loadTasks()
+  if (newStatus === 'completed') {
+    layer.msg('任务已完成', { icon: 1 })
   }
 }
 
 const quickAddTask = () => {
   if (!quickAddText.value.trim()) return
-  tasks.value.push({
-    id: Date.now(),
+  dataManager.todos.add({
     title: quickAddText.value.trim(),
     description: '',
     quadrant: 'important-not-urgent',
     status: 'pending',
-    deadline: ''
+    deadline: '',
+    priority: 'medium',
+    category: 'work'
   })
   quickAddText.value = ''
+  loadTasks()
   layer.msg('添加成功', { icon: 1 })
 }
 
@@ -425,12 +412,13 @@ const saveEdit = () => {
     layer.msg('请输入任务名称', { icon: 5 })
     return
   }
-  const task = tasks.value.find(t => t.id === editingId.value)
-  if (task) {
-    task.title = editData.title.trim()
-    task.quadrant = editData.quadrant
-    layer.msg('修改成功', { icon: 1 })
-  }
+  dataManager.todos.update({
+    id: editingId.value,
+    title: editData.title.trim(),
+    quadrant: editData.quadrant
+  })
+  loadTasks()
+  layer.msg('修改成功', { icon: 1 })
   editingId.value = null
 }
 
@@ -454,29 +442,28 @@ const saveTask = () => {
     return
   }
   if (editingTask.value) {
-    const index = tasks.value.findIndex(t => t.id === editingTask.value.id)
-    if (index !== -1) {
-      tasks.value[index] = { ...formData, id: editingTask.value.id }
-      layer.msg('修改成功', { icon: 1 })
-    }
-  } else {
-    tasks.value.push({
+    dataManager.todos.update({
       ...formData,
-      id: Date.now(),
-      status: 'pending'
+      id: editingTask.value.id
+    })
+    layer.msg('修改成功', { icon: 1 })
+  } else {
+    dataManager.todos.add({
+      ...formData,
+      status: 'pending',
+      quadrant: 'important-not-urgent'
     })
     layer.msg('添加成功', { icon: 1 })
   }
+  loadTasks()
   closeModal()
 }
 
 const deleteTask = (id) => {
   layer.confirm('确定删除该任务吗？', { icon: 3 }, () => {
-    const index = tasks.value.findIndex(t => t.id === id)
-    if (index !== -1) {
-      tasks.value.splice(index, 1)
-      layer.msg('删除成功', { icon: 1 })
-    }
+    dataManager.todos.delete(id)
+    loadTasks()
+    layer.msg('删除成功', { icon: 1 })
   })
 }
 
@@ -502,7 +489,8 @@ const exportTasks = () => {
 
 const clearAllTasks = () => {
   layer.confirm('确定清空所有任务吗？此操作不可恢复。', { icon: 3 }, () => {
-    tasks.value = []
+    dataManager.todos.clearAll()
+    loadTasks()
     layer.msg('已清空所有任务', { icon: 1 })
   })
 }
@@ -525,6 +513,10 @@ const generateReport = () => {
   URL.revokeObjectURL(url)
   layer.msg('报告已生成', { icon: 1 })
 }
+
+onMounted(() => {
+  loadTasks()
+})
 </script>
 
 <style scoped>

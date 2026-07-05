@@ -188,15 +188,153 @@
         <button class="layui-btn reset-btn" @click="resetSettings">恢复默认</button>
       </div>
     </div>
+
+    <div class="settings-card">
+      <div class="card-header">
+        <i class="layui-icon layui-icon-cloud"></i>
+        <span>百度网盘同步</span>
+      </div>
+      <div class="card-body">
+        <div class="sync-section">
+          <div class="sync-status">
+            <div class="status-icon" :class="{ loggedIn: syncStore.isLoggedIn }">
+              <i class="layui-icon" :class="syncStore.isLoggedIn ? 'layui-icon-cloud' : 'layui-icon-cloud-upload'"></i>
+            </div>
+            <div class="status-info">
+              <div class="status-title">{{ syncStore.isLoggedIn ? '已登录百度网盘' : '未登录百度网盘' }}</div>
+              <div class="status-desc">{{ syncStore.loginStatus.message }}</div>
+            </div>
+            <button v-if="!syncStore.isLoggedIn" class="sync-btn login-btn" @click="handleLogin">
+              <i class="layui-icon layui-icon-login"></i>
+              登录百度网盘
+            </button>
+            <button v-else class="sync-btn logout-btn" @click="handleLogout">
+              <i class="layui-icon layui-icon-logout"></i>
+              退出登录
+            </button>
+          </div>
+
+          <div v-if="syncStore.isLoggedIn" class="sync-actions">
+            <div v-if="syncStore.hasNewData" class="new-data-notification">
+              <i class="layui-icon layui-icon-bell"></i>
+              <span>检测到云端有新数据，是否立即同步？</span>
+              <button class="sync-now-btn" @click="handleDownload">立即同步</button>
+              <button class="dismiss-btn" @click="syncStore.dismissNewData">忽略</button>
+            </div>
+
+            <div class="action-row">
+              <button class="action-btn upload-btn" :disabled="syncStore.isSyncing" @click="handleUpload">
+                <i class="layui-icon layui-icon-upload"></i>
+                {{ syncStore.isSyncing ? '同步中...' : '上传数据到网盘' }}
+              </button>
+              <button class="action-btn download-btn" :disabled="syncStore.isSyncing" @click="handleDownload">
+                <i class="layui-icon layui-icon-download"></i>
+                {{ syncStore.isSyncing ? '同步中...' : '从网盘下载数据' }}
+              </button>
+            </div>
+
+            <div class="auto-sync-switch">
+              <span class="switch-label">
+                <i class="layui-icon layui-icon-auto"></i>
+                <span>自动同步</span>
+              </span>
+              <div class="switch-wrapper" @click="toggleAutoSync">
+                <div class="switch-track" :class="{ enabled: syncStore.autoSyncEnabled }">
+                  <div class="switch-thumb"></div>
+                </div>
+              </div>
+              <span class="switch-status">{{ syncStore.autoSyncEnabled ? '开启' : '关闭' }}</span>
+            </div>
+
+            <div class="sync-info">
+              <div class="info-item">
+                <i class="layui-icon layui-icon-clock"></i>
+                <span>最后同步时间: {{ syncStore.lastSyncTime || '从未同步' }}</span>
+              </div>
+              <div class="info-item">
+                <i class="layui-icon layui-icon-refresh"></i>
+                <span>同步状态: {{ syncStore.getSyncStatusText() }}</span>
+              </div>
+              <div class="info-item">
+                <i class="layui-icon layui-icon-file"></i>
+                <span>本地版本: {{ dataManager.getData().syncVersion || 1 }}</span>
+              </div>
+            </div>
+
+            <div v-if="syncStore.syncError" class="sync-error">
+              <i class="layui-icon layui-icon-warning"></i>
+              <span>{{ syncStore.syncError }}</span>
+              <button class="error-close" @click="syncStore.clearError">
+                <i class="layui-icon layui-icon-close"></i>
+              </button>
+            </div>
+
+            <div class="sync-tips">
+              <i class="layui-icon layui-icon-tips"></i>
+              <span>提示：登录百度网盘后，开启自动同步可在手机和电脑之间实时共享数据（待办事项、日记、笔记等）。数据将安全存储在您的百度网盘中。</span>
+            </div>
+
+            <div class="sync-tips small">
+              <i class="layui-icon layui-icon-info"></i>
+              <span>自动同步说明：修改数据后会在5秒内自动上传到百度网盘，打开网页时会检测云端是否有更新。</span>
+            </div>
+          </div>
+
+          <div v-else class="sync-tips">
+            <i class="layui-icon layui-icon-tips"></i>
+            <span>提示：登录百度网盘后即可实现跨设备数据同步，让您的手机和电脑共享同一套数据。</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="settings-card">
+      <div class="card-header">
+        <i class="layui-icon layui-icon-file"></i>
+        <span>数据备份与恢复</span>
+      </div>
+      <div class="card-body">
+        <div class="backup-section">
+          <div class="backup-info">
+            <i class="layui-icon layui-icon-database"></i>
+            <div class="info-text">
+              <div class="info-title">本地数据管理</div>
+              <div class="info-desc">您可以导出当前所有数据到本地文件，或从本地文件导入数据进行恢复。</div>
+            </div>
+          </div>
+
+          <div class="backup-actions">
+            <button class="action-btn backup-btn" @click="exportData">
+              <i class="layui-icon layui-icon-download"></i>
+              导出数据备份
+            </button>
+            <label class="action-btn restore-btn">
+              <i class="layui-icon layui-icon-upload"></i>
+              导入数据恢复
+              <input type="file" accept=".json" class="file-input" @change="importData" />
+            </label>
+          </div>
+
+          <div class="backup-format">
+            <i class="layui-icon layui-icon-file"></i>
+            <span>数据格式: JSON 文件 (.json)</span>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup>
-import { ref, reactive, computed } from 'vue'
+import { ref, reactive, computed, onMounted } from 'vue'
 import { useAppStore } from '@/stores/modules/app'
+import { useSyncStore } from '@/stores/modules/sync'
+import { baiduCloud } from '@/utils/baiduCloud'
+import { dataManager } from '@/utils/dataManager'
 import { layer } from '@layui/layui-vue'
 
 const appStore = useAppStore()
+const syncStore = useSyncStore()
 
 const currentTheme = ref(appStore.currentTheme)
 
@@ -267,6 +405,98 @@ const resetSettings = () => {
   })
   layer.msg('已恢复默认设置', { icon: 6 })
 }
+
+const handleLogin = () => {
+  const authUrl = baiduCloud.getAuthorizationUrl()
+  window.open(authUrl, '_blank', 'width=600,height=500')
+}
+
+const handleLogout = () => {
+  layer.confirm('确定要退出百度网盘登录吗？', { icon: 3 }, () => {
+    syncStore.logout()
+    layer.msg('已退出登录', { icon: 1 })
+  })
+}
+
+const toggleAutoSync = () => {
+  const newState = !syncStore.autoSyncEnabled
+  syncStore.enableAutoSync(newState)
+  layer.msg(newState ? '自动同步已开启' : '自动同步已关闭', { icon: 1 })
+}
+
+const handleUpload = async () => {
+  layer.confirm('确定要上传当前数据到百度网盘吗？这将覆盖网盘中的现有数据。', { icon: 3 }, async () => {
+    const result = await syncStore.uploadData()
+    if (result.success) {
+      layer.msg(result.message, { icon: 1 })
+    } else {
+      layer.msg(result.message, { icon: 5 })
+    }
+  })
+}
+
+const handleDownload = async () => {
+  layer.confirm('确定要从百度网盘下载数据吗？这将覆盖当前本地数据。', { icon: 3 }, async () => {
+    const result = await syncStore.downloadData()
+    if (result.success) {
+      layer.msg(result.message, { icon: 1 })
+      setTimeout(() => {
+        window.location.reload()
+      }, 1000)
+    } else {
+      layer.msg(result.message, { icon: 5 })
+    }
+  })
+}
+
+const exportData = () => {
+  const dataString = dataManager.exportData()
+  const blob = new Blob([dataString], { type: 'application/json' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `self-manage-system-backup-${new Date().toISOString().split('T')[0]}.json`
+  document.body.appendChild(a)
+  a.click()
+  document.body.removeChild(a)
+  URL.revokeObjectURL(url)
+  layer.msg('数据导出成功', { icon: 1 })
+}
+
+const importData = (event) => {
+  const file = event.target.files[0]
+  if (!file) return
+
+  const reader = new FileReader()
+  reader.onload = (e) => {
+    const success = dataManager.importData(e.target.result)
+    if (success) {
+      layer.msg('数据导入成功，页面将刷新', { icon: 1 })
+      setTimeout(() => {
+        window.location.reload()
+      }, 1000)
+    } else {
+      layer.msg('数据格式错误，导入失败', { icon: 5 })
+    }
+  }
+  reader.readAsText(file)
+  event.target.value = ''
+}
+
+onMounted(() => {
+  const hash = window.location.hash
+  const codeMatch = hash.match(/code=([^&]+)/)
+  if (codeMatch && codeMatch[1]) {
+    syncStore.handleOAuthCallback(codeMatch[1]).then(result => {
+      if (result.success) {
+        layer.msg(result.message, { icon: 1 })
+        window.location.hash = '#/system-settings'
+      } else {
+        layer.msg(result.message, { icon: 5 })
+      }
+    })
+  }
+})
 </script>
 
 <style scoped>
@@ -676,5 +906,380 @@ const resetSettings = () => {
 
 .reset-btn:hover {
   background: var(--surface-tint, #f5f5f5);
+}
+
+.sync-section {
+  padding: 16px 0;
+}
+
+.sync-status {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 20px;
+  background: var(--surface-tint, #f8fafc);
+  border-radius: 12px;
+  margin-bottom: 20px;
+}
+
+.status-icon {
+  width: 56px;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: color-mix(in srgb, var(--danger-color, #ef4444) 15%, transparent);
+  border-radius: 14px;
+  font-size: 24px;
+  color: var(--danger-color, #ef4444);
+}
+
+.status-icon.loggedIn {
+  background: color-mix(in srgb, var(--success-color, #0d9488) 15%, transparent);
+  color: var(--success-color, #0d9488);
+}
+
+.status-info {
+  flex: 1;
+}
+
+.status-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-primary, #334155);
+  margin-bottom: 4px;
+}
+
+.status-desc {
+  font-size: 13px;
+  color: var(--text-muted, #94a3b8);
+}
+
+.sync-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 24px;
+  border: none;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.login-btn {
+  background: linear-gradient(135deg, #2563eb 0%, #3b82f6 100%);
+  color: #fff;
+}
+
+.login-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(37, 99, 235, 0.3);
+}
+
+.logout-btn {
+  background: #fff;
+  border: 1px solid var(--surface-tint, #e2e8f0);
+  color: var(--danger-color, #ef4444);
+}
+
+.logout-btn:hover {
+  background: color-mix(in srgb, var(--danger-color, #ef4444) 5%, transparent);
+}
+
+.sync-actions {
+  padding: 16px;
+}
+
+.action-row {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.action-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 24px;
+  border: none;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  flex: 1;
+  justify-content: center;
+}
+
+.action-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.upload-btn {
+  background: linear-gradient(135deg, var(--primary-color, #1e4d7b) 0%, var(--primary-light, #3d7ab5) 100%);
+  color: #fff;
+}
+
+.upload-btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px color-mix(in srgb, var(--primary-color, #1e4d7b) 30%, transparent);
+}
+
+.download-btn {
+  background: #fff;
+  border: 1px solid var(--surface-tint, #e2e8f0);
+  color: var(--text-secondary, #475569);
+}
+
+.download-btn:hover:not(:disabled) {
+  border-color: var(--primary-color, #1e4d7b);
+  color: var(--primary-color, #1e4d7b);
+}
+
+.sync-info {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+  margin-bottom: 16px;
+  padding: 12px 16px;
+  background: var(--surface-tint, #f8fafc);
+  border-radius: 8px;
+}
+
+.info-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--text-secondary, #64748b);
+}
+
+.sync-error {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  background: color-mix(in srgb, var(--danger-color, #ef4444) 10%, transparent);
+  border-radius: 8px;
+  margin-bottom: 16px;
+  font-size: 13px;
+  color: var(--danger-color, #ef4444);
+}
+
+.error-close {
+  margin-left: auto;
+  background: none;
+  border: none;
+  color: var(--danger-color, #ef4444);
+  cursor: pointer;
+  padding: 4px;
+}
+
+.sync-tips,
+.backup-tips {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 12px 16px;
+  background: color-mix(in srgb, var(--warning-color, #f59e0b) 10%, transparent);
+  border-radius: 8px;
+  font-size: 13px;
+  color: var(--text-secondary, #64748b);
+}
+
+.sync-tips.small {
+  padding: 8px 12px;
+  font-size: 12px;
+  margin-top: 8px;
+}
+
+.new-data-notification {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+  background: color-mix(in srgb, var(--success-color, #0d9488) 15%, transparent);
+  border-radius: 10px;
+  margin-bottom: 16px;
+  font-size: 14px;
+  color: var(--text-primary, #334155);
+}
+
+.new-data-notification i {
+  font-size: 18px;
+  color: var(--success-color, #0d9488);
+}
+
+.new-data-notification button {
+  margin-left: auto;
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.sync-now-btn {
+  background: var(--success-color, #0d9488);
+  color: #fff;
+  border: none;
+}
+
+.sync-now-btn:hover {
+  opacity: 0.9;
+}
+
+.dismiss-btn {
+  background: #fff;
+  border: 1px solid var(--surface-tint, #e2e8f0);
+  color: var(--text-secondary, #475569);
+}
+
+.dismiss-btn:hover {
+  border-color: var(--text-muted, #94a3b8);
+}
+
+.auto-sync-switch {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 16px;
+  background: var(--surface-tint, #f8fafc);
+  border-radius: 10px;
+  margin-bottom: 16px;
+}
+
+.switch-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-secondary, #475569);
+}
+
+.switch-wrapper {
+  cursor: pointer;
+}
+
+.switch-track {
+  width: 52px;
+  height: 28px;
+  background: #d1d5db;
+  border-radius: 14px;
+  position: relative;
+  transition: background 0.3s;
+}
+
+.switch-track.enabled {
+  background: var(--primary-color, #1e4d7b);
+}
+
+.switch-thumb {
+  width: 24px;
+  height: 24px;
+  background: #fff;
+  border-radius: 50%;
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  transition: transform 0.3s;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.switch-track.enabled .switch-thumb {
+  transform: translateX(24px);
+}
+
+.switch-status {
+  font-size: 13px;
+  color: var(--text-muted, #94a3b8);
+}
+
+.backup-section {
+  padding: 16px 0;
+}
+
+.backup-info {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.backup-info i {
+  font-size: 28px;
+  color: var(--primary-color, #1e4d7b);
+}
+
+.info-text {
+  flex: 1;
+}
+
+.info-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-primary, #334155);
+  margin-bottom: 4px;
+}
+
+.info-desc {
+  font-size: 13px;
+  color: var(--text-muted, #94a3b8);
+}
+
+.backup-actions {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.backup-btn {
+  background: #fff;
+  border: 1px solid var(--surface-tint, #e2e8f0);
+  color: var(--text-secondary, #475569);
+}
+
+.backup-btn:hover {
+  border-color: var(--primary-color, #1e4d7b);
+  color: var(--primary-color, #1e4d7b);
+}
+
+.restore-btn {
+  background: linear-gradient(135deg, var(--success-color, #0d9488) 0%, color-mix(in srgb, var(--success-color, #0d9488) 70%, white) 100%);
+  color: #fff;
+  position: relative;
+  overflow: hidden;
+}
+
+.restore-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px color-mix(in srgb, var(--success-color, #0d9488) 30%, transparent);
+}
+
+.file-input {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.backup-format {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  background: var(--surface-tint, #f8fafc);
+  border-radius: 8px;
+  font-size: 13px;
+  color: var(--text-muted, #94a3b8);
 }
 </style>

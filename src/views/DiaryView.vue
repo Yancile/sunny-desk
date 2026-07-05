@@ -200,8 +200,9 @@
 </template>
 
 <script setup>
-import { ref, computed, reactive } from 'vue'
+import { ref, computed, reactive, onMounted } from 'vue'
 import { useAppStore } from '@/stores/modules/app'
+import { dataManager } from '@/utils/dataManager'
 import { layer } from '@layui/layui-vue'
 
 const appStore = useAppStore()
@@ -209,14 +210,7 @@ const appStore = useAppStore()
 const currentDate = ref(new Date())
 const selectedDate = ref(new Date())
 const selectedDiary = ref(null)
-
-const diaries = ref([
-  { id: 1, date: '2026-07-01', mood: 'happy', weather: '晴朗', content: '今天工作效率很高，完成了重要的项目文档。晚上和家人一起吃了火锅，非常开心！', tags: ['工作', '家庭'] },
-  { id: 2, date: '2026-06-30', mood: 'calm', weather: '多云', content: '今天比较平静，按部就班地完成了日常工作。下班后阅读了半小时，感觉很放松。', tags: ['阅读'] },
-  { id: 3, date: '2026-06-29', mood: 'anxious', weather: '小雨', content: '项目进度有些紧张，明天有重要的客户会议，需要好好准备。压力有点大，但相信可以克服。', tags: ['工作', '压力'] },
-  { id: 4, date: '2026-06-28', mood: 'relaxed', weather: '晴', content: '周末和朋友去郊外徒步，呼吸新鲜空气，欣赏大自然的美景。身心都得到了放松。', tags: ['旅行', '朋友'] },
-  { id: 5, date: '2026-06-27', mood: 'tired', weather: '阴', content: '连续工作一周，今天感觉特别疲惫。早点休息，明天又是新的一天。', tags: ['休息'] },
-])
+const diaries = ref([])
 
 const showDiaryModal = ref(false)
 const editingDiary = ref(null)
@@ -368,6 +362,10 @@ const isSelectedDiary = (diary) => {
   return selectedDiary.value && selectedDiary.value.id === diary.id
 }
 
+const loadDiaries = () => {
+  diaries.value = dataManager.diaries.getAll()
+}
+
 const prevMonth = () => {
   currentDate.value = new Date(currentYear.value, currentMonth.value - 2, 1)
 }
@@ -436,18 +434,14 @@ const saveDiary = () => {
     formData.date = formatDate(new Date())
   }
   if (editingDiary.value) {
-    const index = diaries.value.findIndex(d => d.id === editingDiary.value.id)
-    if (index !== -1) {
-      diaries.value[index] = { ...formData, id: editingDiary.value.id }
-      selectedDiary.value = diaries.value[index]
-      layer.msg('修改成功', { icon: 1 })
-    }
+    dataManager.diaries.update({ ...formData, id: editingDiary.value.id })
+    loadDiaries()
+    const dateStr = formatDate(selectedDate.value)
+    selectedDiary.value = diaries.value.find(d => d.date === dateStr) || null
+    layer.msg('修改成功', { icon: 1 })
   } else {
-    const newDiary = {
-      ...formData,
-      id: Date.now()
-    }
-    diaries.value.push(newDiary)
+    const newDiary = dataManager.diaries.add(formData)
+    loadDiaries()
     selectedDiary.value = newDiary
     selectedDate.value = new Date(formData.date)
     currentDate.value = new Date(formData.date)
@@ -458,14 +452,16 @@ const saveDiary = () => {
 
 const deleteDiary = (id) => {
   layer.confirm('确定删除该日记吗？', { icon: 3 }, () => {
-    const index = diaries.value.findIndex(d => d.id === id)
-    if (index !== -1) {
-      diaries.value.splice(index, 1)
-      selectedDiary.value = null
-      layer.msg('删除成功', { icon: 1 })
-    }
+    dataManager.diaries.delete(id)
+    loadDiaries()
+    selectedDiary.value = null
+    layer.msg('删除成功', { icon: 1 })
   })
 }
+
+onMounted(() => {
+  loadDiaries()
+})
 </script>
 
 <style scoped>

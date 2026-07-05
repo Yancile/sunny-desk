@@ -168,7 +168,7 @@
 <script setup>
 import { ref, reactive, computed, onMounted } from 'vue'
 import { useAppStore } from '@/stores/modules/app'
-import { getUserList, addUser, updateUser, updateUserStatus, deleteUser as deleteUserApi } from '../api/user'
+import { dataManager } from '@/utils/dataManager'
 import { layer } from '@layui/layui-vue'
 
 const appStore = useAppStore()
@@ -239,33 +239,20 @@ const visiblePages = computed(() => {
   return pages
 })
 
-const fetchUsers = async () => {
-  try {
-    console.log('fetchUsers called, params:', {
-      page: currentPage.value,
-      limit: pageSize.value,
-      username: searchUsername.value,
-      role: userTypeFilter.value
-    })
-    const params = {
-      page: currentPage.value,
-      limit: pageSize.value,
-    }
-    if (searchUsername.value) {
-      params.username = searchUsername.value
-    }
-    if (userTypeFilter.value) {
-      params.role = userTypeFilter.value
-    }
-    const res = await getUserList(params)
-    console.log('fetchUsers response:', res)
-    users.value = res.data.list
-    total.value = res.data.total
-    console.log('users set to:', users.value, 'total:', total.value)
-  } catch (error) {
-    console.error('获取用户列表失败:', error)
-    layer.msg('获取用户列表失败', { icon: 5 })
+const fetchUsers = () => {
+  let allUsers = dataManager.users.getAll()
+  
+  if (searchUsername.value) {
+    allUsers = allUsers.filter(u => u.username.includes(searchUsername.value))
   }
+  if (userTypeFilter.value) {
+    allUsers = allUsers.filter(u => u.role === userTypeFilter.value)
+  }
+  
+  total.value = allUsers.length
+  const start = (currentPage.value - 1) * pageSize.value
+  const end = start + pageSize.value
+  users.value = allUsers.slice(start, end)
 }
 
 const prevPage = () => {
@@ -316,7 +303,7 @@ const closeDialog = () => {
   dialogVisible.value = false
 }
 
-const submitForm = async () => {
+const submitForm = () => {
   if (!form.username) {
     layer.msg('请输入用户名', { icon: 5 })
     return
@@ -328,16 +315,20 @@ const submitForm = async () => {
 
   try {
     if (isEdit.value) {
-      await updateUser(form)
+      const updateData = { ...form }
+      if (!updateData.password) {
+        delete updateData.password
+      }
+      dataManager.users.update(updateData)
       layer.msg('编辑成功', { icon: 6 })
     } else {
-      await addUser(form)
+      dataManager.users.add(form)
       layer.msg('新增成功', { icon: 6 })
       currentPage.value = 1
       searchUsername.value = ''
       userTypeFilter.value = ''
     }
-    await fetchUsers()
+    fetchUsers()
   } catch (error) {
     console.error('提交失败:', error)
   } finally {
@@ -345,11 +336,11 @@ const submitForm = async () => {
   }
 }
 
-const toggleUserStatus = async (user) => {
+const toggleUserStatus = (user) => {
   const newStatus = user.status === 1 ? 0 : 1
   const statusText = newStatus === 1 ? '启用' : '禁用'
   try {
-    await updateUserStatus(user.id, newStatus)
+    dataManager.users.updateStatus(user.id, newStatus)
     layer.msg(`${statusText}成功`, { icon: 6 })
     fetchUsers()
   } catch (error) {
@@ -362,14 +353,14 @@ const deleteUser = (id) => {
   showDeleteConfirm.value = true
 }
 
-const confirmDelete = async () => {
+const confirmDelete = () => {
   try {
-    await deleteUserApi(deleteUserId.value)
+    dataManager.users.delete(deleteUserId.value)
     layer.msg('删除成功', { icon: 6 })
     if (users.value.length === 1 && currentPage.value > 1) {
       currentPage.value--
     }
-    await fetchUsers()
+    fetchUsers()
   } catch (error) {
     console.error('删除失败:', error)
   }

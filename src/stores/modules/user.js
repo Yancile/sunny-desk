@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { login as loginApi } from '@/api/user'
+import { dataManager } from '@/utils/dataManager'
 
 export const useUserStore = defineStore('user', {
   state: () => ({
@@ -21,11 +21,20 @@ export const useUserStore = defineStore('user', {
     },
     async login(username, password) {
       try {
-        const res = await loginApi({ username, password })
-        this.setToken(res.data.token)
-        this.setUserInfo(res.data.userInfo)
-        return true
+        const user = dataManager.users.validateLogin(username, password)
+        if (user) {
+          this.setToken(`local-${user.id}-${Date.now()}`)
+          this.setUserInfo({
+            id: user.id,
+            username: user.username,
+            role: user.role,
+            status: user.status
+          })
+          return true
+        }
+        return false
       } catch (error) {
+        console.error('登录失败:', error)
         return false
       }
     },
@@ -33,6 +42,8 @@ export const useUserStore = defineStore('user', {
       this.token = ''
       this.userInfo = {}
       this.role = ''
+      localStorage.clear()
+      window.location.href = '/#/login'
     },
   },
   persist: true,

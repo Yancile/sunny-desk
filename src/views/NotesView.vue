@@ -237,7 +237,7 @@
     </div>
 
     <div v-if="showNoteModal" class="modal-overlay" @click.self="closeNoteModal">
-      <div class="modal-content">
+      <div class="modal-content small">
         <div class="modal-header">
           <span class="modal-title">{{ editingNote ? '编辑笔记' : (parentNoteId ? '新建子笔记' : '新建笔记') }}</span>
           <button class="modal-close" @click="closeNoteModal">
@@ -256,10 +256,6 @@
               <option v-for="section in getSections(selectedNotebook.id)" :key="section.id" :value="section.id">{{
                 section.name }}</option>
             </select>
-          </div>
-          <div class="form-group">
-            <label>内容</label>
-            <textarea v-model="formData.content" placeholder="支持 Markdown 语法" class="form-textarea"></textarea>
           </div>
           <div class="form-group">
             <label>标签</label>
@@ -772,20 +768,33 @@ const closeNoteModal = () => {
 }
 
 const saveNote = () => {
-  if (!formData.title.trim() && !formData.content.trim()) {
-    layer.msg('请输入标题或内容', { icon: 5 })
+  if (!formData.title.trim()) {
+    layer.msg('请输入标题', { icon: 5 })
     return
   }
+
+  const notebookId = formData.notebookId || selectedNotebook.value?.id || ''
+  const sectionId = formData.sectionId || selectedSection.value?.id || ''
+
   if (editingNote.value) {
     const index = notes.value.findIndex(n => n.id === editingNote.value.id)
     if (index !== -1) {
-      notes.value[index] = { ...formData, id: editingNote.value.id, createdAt: editingNote.value.createdAt, updatedAt: new Date().toISOString() }
+      notes.value[index] = {
+        ...formData,
+        id: editingNote.value.id,
+        notebookId: notebookId || editingNote.value.notebookId,
+        sectionId: sectionId || editingNote.value.sectionId,
+        createdAt: editingNote.value.createdAt,
+        updatedAt: new Date().toISOString()
+      }
       selectedNote.value = notes.value[index]
       layer.msg('修改成功', { icon: 1 })
     }
   } else {
     const newNote = {
       ...formData,
+      notebookId: notebookId,
+      sectionId: sectionId,
       id: Date.now(),
       parentId: parentNoteId.value,
       createdAt: new Date().toISOString(),
@@ -793,6 +802,14 @@ const saveNote = () => {
     }
     notes.value.push(newNote)
     selectedNote.value = newNote
+
+    if (!selectedNotebook.value && notebookId) {
+      selectedNotebook.value = notebooks.value.find(n => n.id === notebookId) || null
+    }
+    if (!selectedSection.value && sectionId) {
+      selectedSection.value = sections.value.find(s => s.id === sectionId) || null
+    }
+
     layer.msg('创建成功', { icon: 1 })
   }
   closeNoteModal()

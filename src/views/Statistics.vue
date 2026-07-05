@@ -126,7 +126,7 @@
 import { ref, onMounted, onUnmounted, watch, computed } from 'vue'
 import * as echarts from 'echarts'
 import { useAppStore } from '@/stores/modules/app'
-import { getStatistics } from '../api/user'
+import { dataManager } from '@/utils/dataManager'
 
 const appStore = useAppStore()
 const pieChartRef = ref(null)
@@ -150,13 +150,13 @@ const themeStyle = computed(() => ({
   '--surface-tint': appStore.surfaceTint,
 }))
 
-const fetchStatistics = async () => {
+const fetchStatistics = () => {
   try {
-    const res = await getStatistics()
-    totalUsers.value = res.data.total
-    adminCount.value = res.data.adminCount
-    studentCount.value = res.data.studentCount
-    teacherCount.value = res.data.teacherCount
+    const stats = dataManager.users.getStatistics()
+    totalUsers.value = stats.total
+    adminCount.value = stats.adminCount
+    studentCount.value = stats.studentCount
+    teacherCount.value = stats.teacherCount
     updateCharts()
   } catch (error) {
     console.error('获取统计数据失败:', error)

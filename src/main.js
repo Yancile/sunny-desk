@@ -8,6 +8,7 @@ import piniaPluginPersistedstate from 'pinia-plugin-persistedstate'
 
 import App from './App.vue'
 import router from './router'
+import { dataManager } from './utils/dataManager'
 
 const app = createApp(App)
 const pinia = createPinia()
@@ -19,3 +20,20 @@ app.use(router)
 app.use(LayuiVue)
 
 app.mount('#app')
+
+const initSync = async () => {
+  try {
+    const { useSyncStore } = await import('./stores/modules/sync')
+    const syncStore = useSyncStore()
+    
+    dataManager.setOnDataChangedCallback(() => {
+      syncStore.handleDataChanged()
+    })
+    
+    await syncStore.checkCloudDataOnStartup()
+  } catch (error) {
+    console.error('初始化同步功能失败:', error)
+  }
+}
+
+initSync()

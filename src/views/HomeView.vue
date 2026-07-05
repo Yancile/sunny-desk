@@ -255,7 +255,7 @@ import { computed, ref, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/modules/user'
 import { useAppStore } from '@/stores/modules/app'
-import { getStatistics } from '@/api/user'
+import { dataManager } from '@/utils/dataManager'
 
 const router = useRouter()
 const userStore = useUserStore()
@@ -335,13 +335,13 @@ const goTo = (path) => {
   router.push(path)
 }
 
-const fetchStatistics = async () => {
+const fetchStatistics = () => {
   try {
-    const res = await getStatistics()
-    totalUsers.value = res.data.total
-    adminCount.value = res.data.adminCount
-    studentCount.value = res.data.studentCount
-    teacherCount.value = res.data.teacherCount
+    const stats = dataManager.users.getStatistics()
+    totalUsers.value = stats.total
+    adminCount.value = stats.adminCount
+    studentCount.value = stats.studentCount
+    teacherCount.value = stats.teacherCount
   } catch (error) {
     console.error('获取统计数据失败:', error)
   }

@@ -126,7 +126,7 @@ import { ref, reactive, computed } from 'vue'
 import { useUserStore } from '@/stores/modules/user'
 import { useAppStore } from '@/stores/modules/app'
 import { layer } from '@layui/layui-vue'
-import { updateProfile, changePassword } from '@/api/user'
+import { dataManager } from '@/utils/dataManager'
 
 const userStore = useUserStore()
 const appStore = useAppStore()
@@ -164,20 +164,23 @@ const closeEditDialog = () => {
   editDialogVisible.value = false
 }
 
-const submitEditForm = async () => {
+const submitEditForm = () => {
   if (!editForm.username) {
     layer.msg('请输入用户名', { icon: 5 })
     return
   }
 
   try {
-    await updateProfile({
-      id: userStore.userInfo.id,
+    const success = dataManager.users.updateProfile(userStore.userInfo.id, {
       username: editForm.username,
     })
-    userStore.userInfo.username = editForm.username
-    layer.msg('修改成功', { icon: 6 })
-    closeEditDialog()
+    if (success) {
+      userStore.userInfo.username = editForm.username
+      layer.msg('修改成功', { icon: 6 })
+      closeEditDialog()
+    } else {
+      layer.msg('修改失败，请重试', { icon: 5 })
+    }
   } catch (error) {
     console.error('修改失败:', error)
     layer.msg('修改失败，请重试', { icon: 5 })
@@ -195,7 +198,7 @@ const closePwdDialog = () => {
   pwdDialogVisible.value = false
 }
 
-const submitPwdForm = async () => {
+const submitPwdForm = () => {
   if (!pwdForm.oldPassword) {
     layer.msg('请输入旧密码', { icon: 5 })
     return
@@ -214,15 +217,20 @@ const submitPwdForm = async () => {
   }
 
   try {
-    await changePassword({
-      oldPassword: pwdForm.oldPassword,
-      newPassword: pwdForm.newPassword,
-    })
-    layer.msg('密码修改成功', { icon: 6 })
-    closePwdDialog()
+    const result = dataManager.users.changePassword(
+      userStore.userInfo.id,
+      pwdForm.oldPassword,
+      pwdForm.newPassword
+    )
+    if (result.success) {
+      layer.msg('密码修改成功', { icon: 6 })
+      closePwdDialog()
+    } else {
+      layer.msg(result.message || '密码修改失败，请检查旧密码是否正确', { icon: 5 })
+    }
   } catch (error) {
     console.error('密码修改失败:', error)
-    layer.msg(error.response?.data?.message || '密码修改失败，请检查旧密码是否正确', { icon: 5 })
+    layer.msg('密码修改失败，请检查旧密码是否正确', { icon: 5 })
   }
 }
 </script>
