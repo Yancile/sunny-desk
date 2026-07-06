@@ -371,6 +371,26 @@ const toggleTaskStatus = (id) => {
   const newStatus = dataManager.todos.toggleStatus(id)
   loadTasks()
   if (newStatus === 'completed') {
+    const task = dataManager.todos.getById(id)
+    if (task && task.habitId) {
+      const habit = dataManager.habits.getById(task.habitId)
+      if (habit) {
+        const today = new Date().toISOString().split('T')[0]
+        if (!habit.checkedDays.includes(today)) {
+          habit.checkedDays.push(today)
+          habit.todayChecked = true
+          const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0]
+          if (habit.checkedDays.includes(yesterday)) {
+            habit.streak = (habit.streak || 0) + 1
+          } else {
+            habit.streak = 1
+          }
+          dataManager.habits.update(habit)
+          layer.msg(`任务已完成，已同步打卡习惯「${habit.name}」`, { icon: 1 })
+          return
+        }
+      }
+    }
     layer.msg('任务已完成', { icon: 1 })
   }
 }
@@ -460,11 +480,15 @@ const saveTask = () => {
 }
 
 const deleteTask = (id) => {
-  layer.confirm('确定删除该任务吗？', { icon: 3 }, () => {
-    dataManager.todos.delete(id)
-    loadTasks()
-    layer.msg('删除成功', { icon: 1 })
-  })
+  if (confirm('确定删除该任务吗？')) {
+    const success = dataManager.todos.delete(id)
+    if (success) {
+      tasks.value = tasks.value.filter(t => String(t.id) !== String(id))
+      layer.msg('删除成功', { icon: 1 })
+    } else {
+      layer.msg('删除失败', { icon: 5 })
+    }
+  }
 }
 
 const exportTasks = () => {
@@ -488,11 +512,11 @@ const exportTasks = () => {
 }
 
 const clearAllTasks = () => {
-  layer.confirm('确定清空所有任务吗？此操作不可恢复。', { icon: 3 }, () => {
+  if (confirm('确定清空所有任务吗？此操作不可恢复。')) {
     dataManager.todos.clearAll()
-    loadTasks()
+    tasks.value = []
     layer.msg('已清空所有任务', { icon: 1 })
-  })
+  }
 }
 
 const generateReport = () => {

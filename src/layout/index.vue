@@ -159,18 +159,18 @@ const allMenus = computed(() => {
     { path: '/todo', title: '待办事项', icon: 'layui-icon layui-icon-list' },
     { path: '/goals', title: '长期目标', icon: 'layui-icon layui-icon-flag' },
     { path: '/memo', title: '备忘录', icon: 'layui-icon layui-icon-note' },
-    { path: '/schedule', title: '日程管理', icon: 'layui-icon layui-icon-calendar' },
+    { path: '/schedule', title: '日程管理', icon: 'layui-icon layui-icon-date' },
     { path: '/diary', title: '日记', icon: 'layui-icon layui-icon-file' },
     { path: '/notes', title: '笔记本', icon: 'layui-icon layui-icon-read' },
     { path: '/bookmarks', title: '网站导航', icon: 'layui-icon layui-icon-link' },
-    { path: '/pomodoro', title: '番茄钟', icon: 'layui-icon layui-icon-clock' },
+    { path: '/pomodoro', title: '番茄钟', icon: 'layui-icon layui-icon-time' },
   ]
 
   if (userStore.userInfo.role === 'admin') {
     baseMenus.push(
       { path: '/user-management', title: '用户管理', icon: 'layui-icon layui-icon-user' },
       { path: '/dashboard', title: '数据看板', icon: 'layui-icon layui-icon-chart' },
-      { path: '/statistics', title: '统计报表', icon: 'layui-icon layui-icon-bar-chart' },
+      { path: '/statistics', title: '统计报表', icon: 'layui-icon layui-icon-chart-screen' },
       { path: '/system-settings', title: '系统设置', icon: 'layui-icon layui-icon-set' }
     )
   }
@@ -278,6 +278,26 @@ const confirmLogout = () => {
   padding: 0 12px;
   margin: 0;
   flex: 1;
+  overflow-y: auto;
+  min-height: 0;
+  max-height: 100%;
+}
+
+.sidebar-menu::-webkit-scrollbar {
+  width: 3px;
+}
+
+.sidebar-menu::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.sidebar-menu::-webkit-scrollbar-thumb {
+  background: var(--sidebar-hover-color, #cbd5e1);
+  border-radius: 10px;
+}
+
+.sidebar-menu::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted, #94a3b8);
 }
 
 .menu-item {

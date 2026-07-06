@@ -14,7 +14,7 @@
     <div class="stats-row">
       <div class="stat-card">
         <div class="stat-icon goals">
-          <i class="layui-icon layui-icon-target"></i>
+          <i class="layui-icon layui-icon-form"></i>
         </div>
         <div class="stat-info">
           <div class="stat-value">{{ goals.length }}</div>
@@ -23,7 +23,7 @@
       </div>
       <div class="stat-card">
         <div class="stat-icon completed">
-          <i class="layui-icon layui-icon-check-circle"></i>
+          <i class="layui-icon layui-icon-ok"></i>
         </div>
         <div class="stat-info">
           <div class="stat-value">{{ completedGoals }}</div>
@@ -32,7 +32,7 @@
       </div>
       <div class="stat-card">
         <div class="stat-icon habits">
-          <i class="layui-icon layui-icon-calendar"></i>
+          <i class="layui-icon layui-icon-menu-fill"></i>
         </div>
         <div class="stat-info">
           <div class="stat-value">{{ habits.length }}</div>
@@ -126,9 +126,20 @@
             <div class="habit-name">{{ habit.name }}</div>
             <div class="habit-streak">🔥 连续 {{ habit.streak }} 天</div>
           </div>
-          <button class="check-btn" :class="{ checked: habit.todayChecked }" @click="toggleHabit(habit.id)">
-            <i class="layui-icon layui-icon-check"></i>
-          </button>
+          <div class="habit-actions">
+            <button class="habit-action-btn add-todo" @click="addHabitToTodo(habit)" title="添加到待办">
+              <i class="layui-icon layui-icon-list"></i>
+            </button>
+            <button class="habit-action-btn edit" @click="editHabit(habit)" title="编辑">
+              <i class="layui-icon layui-icon-edit"></i>
+            </button>
+            <button class="habit-action-btn delete" @click="deleteHabit(habit.id)" title="删除">
+              <i class="layui-icon layui-icon-delete"></i>
+            </button>
+            <button class="check-btn" :class="{ checked: habit.todayChecked }" @click="toggleHabit(habit.id)">
+              <i class="layui-icon layui-icon-check"></i>
+            </button>
+          </div>
         </div>
         <div class="habit-calendar">
           <div v-for="(day, index) in getLast7Days()" :key="index" class="calendar-day"
@@ -148,7 +159,7 @@
             </select>
             <span v-else class="goal-category-badge" :class="selectedGoal?.category">{{
               getCategoryText(selectedGoal?.category)
-              }}</span>
+            }}</span>
             <input v-if="isEditing" v-model="editForm.title" class="title-input" />
             <span v-else class="modal-title">{{ selectedGoal?.title }}</span>
           </div>
@@ -351,143 +362,77 @@
         </div>
       </div>
     </div>
+
+    <div v-if="showEditHabitModal" class="modal-overlay" @click.self="closeEditHabitModal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <span class="modal-title">编辑习惯</span>
+          <button class="modal-close" @click="closeEditHabitModal">
+            <i class="layui-icon layui-icon-close"></i>
+          </button>
+        </div>
+        <div class="modal-body">
+          <div class="form-group">
+            <label>习惯名称</label>
+            <input type="text" v-model="editHabitForm.name" placeholder="请输入习惯名称" class="form-input" />
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>图标</label>
+              <select v-model="editHabitForm.icon" class="form-select">
+                <option value="layui-icon layui-icon-sunny">☀️ 太阳</option>
+                <option value="layui-icon layui-icon-book">📚 书本</option>
+                <option value="layui-icon layui-icon-heart">❤️ 心形</option>
+                <option value="layui-icon layui-icon-face-smile">😊 笑脸</option>
+                <option value="layui-icon layui-icon-run">🏃 跑步</option>
+                <option value="layui-icon layui-icon-music">🎵 音乐</option>
+                <option value="layui-icon layui-icon-code">💻 代码</option>
+                <option value="layui-icon layui-icon-coffee">☕ 咖啡</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>颜色</label>
+              <select v-model="editHabitForm.color" class="form-select">
+                <option value="#f59e0b">橙色</option>
+                <option value="#8b5cf6">紫色</option>
+                <option value="#ef4444">红色</option>
+                <option value="#10b981">绿色</option>
+                <option value="#3b82f6">蓝色</option>
+                <option value="#ec4899">粉色</option>
+                <option value="#06b6d4">青色</option>
+                <option value="#84cc16">黄绿色</option>
+              </select>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn-cancel" @click="closeEditHabitModal">取消</button>
+          <button class="btn-confirm" @click="saveEditHabit">保存修改</button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup>
-import { ref, computed, reactive } from 'vue'
+import { ref, computed, reactive, onMounted } from 'vue'
 import { useAppStore } from '@/stores/modules/app'
 import { layer } from '@layui/layui-vue'
+import { dataManager } from '@/utils/dataManager'
 
 const appStore = useAppStore()
 
-const goals = ref([
-  {
-    id: 1,
-    title: '完成年度学习计划',
-    description: '掌握Vue3、TypeScript等前端技术，提升专业能力',
-    category: 'study',
-    deadline: '2026-12-31',
-    progress: 45,
-    milestones: [
-      { title: 'Vue3基础学习', date: '2026-03-31', completed: true },
-      { title: 'TypeScript进阶', date: '2026-06-30', completed: true },
-      { title: '项目实战', date: '2026-09-30', completed: false },
-      { title: '技术总结', date: '2026-12-31', completed: false }
-    ]
-  },
-  {
-    id: 2,
-    title: '健身目标 - 减脂塑形',
-    description: '通过规律运动和健康饮食，达到理想体型',
-    category: 'fitness',
-    deadline: '2026-09-30',
-    progress: 30,
-    milestones: [
-      { title: '减重5kg', date: '2026-05-31', completed: true },
-      { title: '减重10kg', date: '2026-07-31', completed: false },
-      { title: '体脂率达标', date: '2026-09-30', completed: false }
-    ]
-  },
-  {
-    id: 3,
-    title: '阅读20本书',
-    description: '涵盖技术、管理、文学等多个领域',
-    category: 'life',
-    deadline: '2026-12-31',
-    progress: 25,
-    milestones: [
-      { title: '完成5本', date: '2026-03-31', completed: true },
-      { title: '完成10本', date: '2026-06-30', completed: false },
-      { title: '完成15本', date: '2026-09-30', completed: false },
-      { title: '完成20本', date: '2026-12-31', completed: false }
-    ]
-  },
-  {
-    id: 4,
-    title: '财务目标 - 存款计划',
-    description: '制定合理的储蓄计划，实现财务自由',
-    category: 'finance',
-    deadline: '2026-12-31',
-    progress: 60,
-    milestones: [
-      { title: '存满1万元', date: '2026-03-31', completed: true },
-      { title: '存满3万元', date: '2026-06-30', completed: true },
-      { title: '存满5万元', date: '2026-09-30', completed: false },
-      { title: '存满8万元', date: '2026-12-31', completed: false }
-    ]
-  },
-  {
-    id: 5,
-    title: '项目管理能力提升',
-    description: '学习项目管理方法论，提升团队协作效率',
-    category: 'work',
-    deadline: '2026-08-31',
-    progress: 75,
-    milestones: [
-      { title: 'PMP认证学习', date: '2026-04-30', completed: true },
-      { title: '项目实战应用', date: '2026-06-30', completed: true },
-      { title: '团队培训', date: '2026-08-31', completed: false }
-    ]
-  }
-])
+const goals = ref([])
+const habits = ref([])
 
-const habits = ref([
-  {
-    id: 1,
-    name: '早起',
-    icon: 'layui-icon layui-icon-sunny',
-    color: '#f59e0b',
-    streak: 15,
-    todayChecked: true,
-    checkedDays: ['2026-06-25', '2026-06-26', '2026-06-27', '2026-06-28', '2026-06-29', '2026-06-30', '2026-07-01']
-  },
-  {
-    id: 2,
-    name: '阅读',
-    icon: 'layui-icon layui-icon-book',
-    color: '#8b5cf6',
-    streak: 8,
-    todayChecked: false,
-    checkedDays: ['2026-06-24', '2026-06-25', '2026-06-26', '2026-06-27', '2026-06-28', '2026-06-29', '2026-06-30']
-  },
-  {
-    id: 3,
-    name: '运动',
-    icon: 'layui-icon layui-icon-heart',
-    color: '#ef4444',
-    streak: 5,
-    todayChecked: false,
-    checkedDays: ['2026-06-27', '2026-06-28', '2026-06-29', '2026-06-30', '2026-07-01']
-  },
-  {
-    id: 4,
-    name: '冥想',
-    icon: 'layui-icon layui-icon-face-smile',
-    color: '#10b981',
-    streak: 21,
-    todayChecked: true,
-    checkedDays: ['2026-06-11', '2026-06-12', '2026-06-13', '2026-06-14', '2026-06-15', '2026-06-16', '2026-06-17']
-  },
-  {
-    id: 5,
-    name: '写日记',
-    icon: 'layui-icon layui-icon-file',
-    color: '#3b82f6',
-    streak: 3,
-    todayChecked: false,
-    checkedDays: ['2026-06-29', '2026-06-30', '2026-07-01']
-  },
-  {
-    id: 6,
-    name: '代码练习',
-    icon: 'layui-icon layui-icon-code',
-    color: '#ec4899',
-    streak: 10,
-    todayChecked: true,
-    checkedDays: ['2026-06-22', '2026-06-23', '2026-06-24', '2026-06-25', '2026-06-26', '2026-06-27', '2026-06-28']
-  }
-])
+const loadData = () => {
+  goals.value = dataManager.goals.getAll()
+  habits.value = dataManager.habits.getAll()
+}
+
+onMounted(() => {
+  loadData()
+})
 
 const selectedGoal = ref(null)
 const showGoalModal = ref(false)
@@ -522,6 +467,15 @@ const formData = reactive({
 })
 
 const habitForm = reactive({
+  name: '',
+  icon: 'layui-icon layui-icon-sunny',
+  color: '#f59e0b'
+})
+
+const showEditHabitModal = ref(false)
+const editingHabit = ref(null)
+const editHabitForm = reactive({
+  id: '',
   name: '',
   icon: 'layui-icon layui-icon-sunny',
   color: '#f59e0b'
@@ -608,6 +562,8 @@ const toggleHabit = (id) => {
       habit.streak++
       layer.msg('打卡成功！连续 ' + habit.streak + ' 天', { icon: 1 })
     }
+    dataManager.habits.update(habit)
+    loadData()
   }
 }
 
@@ -617,6 +573,8 @@ const updateProgress = (delta) => {
     if (newProgress < 0) newProgress = 0
     if (newProgress > 100) newProgress = 100
     selectedGoal.value.progress = newProgress
+    dataManager.goals.update(selectedGoal.value)
+    loadData()
     if (newProgress === 100) {
       layer.msg('恭喜！目标已完成！', { icon: 6 })
     }
@@ -630,6 +588,8 @@ const toggleMilestone = (goalId, index) => {
     const total = goal.milestones.length
     const completed = goal.milestones.filter(m => m.completed).length
     goal.progress = total > 0 ? Math.round((completed / total) * 100) : 0
+    dataManager.goals.update(goal)
+    loadData()
     if (goal.progress === 100) {
       layer.msg('恭喜！目标已完成！', { icon: 6 })
     }
@@ -664,6 +624,8 @@ const saveMilestoneEdit = () => {
     const total = selectedGoal.value.milestones.length
     const completed = selectedGoal.value.milestones.filter(m => m.completed).length
     selectedGoal.value.progress = total > 0 ? Math.round((completed / total) * 100) : 0
+    dataManager.goals.update(selectedGoal.value)
+    loadData()
   }
 }
 
@@ -748,30 +710,33 @@ const saveGoal = () => {
     return
   }
   if (editingGoal.value) {
-    const index = goals.value.findIndex(g => g.id === editingGoal.value.id)
-    if (index !== -1) {
-      goals.value[index] = { ...formData, id: editingGoal.value.id, progress: editingGoal.value.progress }
-      layer.msg('修改成功', { icon: 1 })
-    }
-  } else {
-    goals.value.unshift({
+    dataManager.goals.update({
       ...formData,
-      id: Date.now(),
+      id: editingGoal.value.id,
+      progress: editingGoal.value.progress
+    })
+    layer.msg('修改成功', { icon: 1 })
+  } else {
+    dataManager.goals.add({
+      ...formData,
       progress: 0
     })
     layer.msg('创建成功', { icon: 1 })
   }
+  loadData()
   closeGoalModal()
 }
 
 const deleteGoal = (id) => {
-  layer.confirm('确定删除该目标吗？', { icon: 3 }, () => {
-    const index = goals.value.findIndex(g => g.id === id)
-    if (index !== -1) {
-      goals.value.splice(index, 1)
+  if (confirm('确定删除该目标吗？')) {
+    const success = dataManager.goals.delete(id)
+    if (success) {
+      goals.value = goals.value.filter(g => String(g.id) !== String(id))
       layer.msg('删除成功', { icon: 1 })
+    } else {
+      layer.msg('删除失败', { icon: 5 })
     }
-  })
+  }
 }
 
 const closeHabitModal = () => {
@@ -786,17 +751,77 @@ const saveHabit = () => {
     layer.msg('请输入习惯名称', { icon: 5 })
     return
   }
-  habits.value.push({
-    id: Date.now(),
+  dataManager.habits.add({
     name: habitForm.name.trim(),
     icon: habitForm.icon,
-    color: habitForm.color,
-    streak: 0,
-    todayChecked: false,
-    checkedDays: []
+    color: habitForm.color
   })
   layer.msg('创建成功', { icon: 1 })
+  loadData()
   closeHabitModal()
+}
+
+const editHabit = (habit) => {
+  editingHabit.value = habit
+  editHabitForm.id = habit.id
+  editHabitForm.name = habit.name
+  editHabitForm.icon = habit.icon
+  editHabitForm.color = habit.color
+  showEditHabitModal.value = true
+}
+
+const closeEditHabitModal = () => {
+  showEditHabitModal.value = false
+  editingHabit.value = null
+  editHabitForm.id = ''
+  editHabitForm.name = ''
+  editHabitForm.icon = 'layui-icon layui-icon-sunny'
+  editHabitForm.color = '#f59e0b'
+}
+
+const saveEditHabit = () => {
+  if (!editHabitForm.name.trim()) {
+    layer.msg('请输入习惯名称', { icon: 5 })
+    return
+  }
+  dataManager.habits.update({
+    id: editHabitForm.id,
+    name: editHabitForm.name.trim(),
+    icon: editHabitForm.icon,
+    color: editHabitForm.color,
+    streak: editingHabit.value.streak,
+    todayChecked: editingHabit.value.todayChecked,
+    checkedDays: editingHabit.value.checkedDays
+  })
+  layer.msg('修改成功', { icon: 1 })
+  loadData()
+  closeEditHabitModal()
+}
+
+const deleteHabit = (id) => {
+  if (confirm('确定删除该习惯吗？')) {
+    const success = dataManager.habits.delete(id)
+    if (success) {
+      habits.value = habits.value.filter(h => String(h.id) !== String(id))
+      layer.msg('删除成功', { icon: 1 })
+    } else {
+      layer.msg('删除失败', { icon: 5 })
+    }
+  }
+}
+
+const addHabitToTodo = (habit) => {
+  dataManager.todos.add({
+    title: habit.name,
+    category: 'life',
+    priority: 'medium',
+    dueDate: new Date().toISOString().split('T')[0],
+    description: `习惯打卡: ${habit.name}`,
+    quadrant: 'important-not-urgent',
+    status: 'pending',
+    habitId: habit.id
+  })
+  layer.msg('已添加到待办事项', { icon: 1 })
 }
 </script>
 
@@ -1246,6 +1271,55 @@ const saveHabit = () => {
   background: #10b981;
   border-color: #10b981;
   color: #fff;
+}
+
+.habit-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+}
+
+.habit-action-btn {
+  width: 34px;
+  height: 34px;
+  border: none;
+  border-radius: 8px;
+  background: #f8fafc;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  transition: all 0.2s ease;
+}
+
+.habit-action-btn:hover {
+  background: #e2e8f0;
+}
+
+.habit-action-btn.add-todo {
+  color: #3b82f6;
+}
+
+.habit-action-btn.add-todo:hover {
+  background: #dbeafe;
+}
+
+.habit-action-btn.edit {
+  color: #f59e0b;
+}
+
+.habit-action-btn.edit:hover {
+  background: #fef3c7;
+}
+
+.habit-action-btn.delete {
+  color: #ef4444;
+}
+
+.habit-action-btn.delete:hover {
+  background: #fee2e2;
 }
 
 .habit-calendar {

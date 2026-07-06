@@ -412,10 +412,10 @@ const handleLogin = () => {
 }
 
 const handleLogout = () => {
-  layer.confirm('确定要退出百度网盘登录吗？', { icon: 3 }, () => {
+  if (confirm('确定要退出百度网盘登录吗？')) {
     syncStore.logout()
     layer.msg('已退出登录', { icon: 1 })
-  })
+  }
 }
 
 const toggleAutoSync = () => {
@@ -425,18 +425,18 @@ const toggleAutoSync = () => {
 }
 
 const handleUpload = async () => {
-  layer.confirm('确定要上传当前数据到百度网盘吗？这将覆盖网盘中的现有数据。', { icon: 3 }, async () => {
+  if (confirm('确定要上传当前数据到百度网盘吗？这将覆盖网盘中的现有数据。')) {
     const result = await syncStore.uploadData()
     if (result.success) {
       layer.msg(result.message, { icon: 1 })
     } else {
       layer.msg(result.message, { icon: 5 })
     }
-  })
+  }
 }
 
 const handleDownload = async () => {
-  layer.confirm('确定要从百度网盘下载数据吗？这将覆盖当前本地数据。', { icon: 3 }, async () => {
+  if (confirm('确定要从百度网盘下载数据吗？这将覆盖当前本地数据。')) {
     const result = await syncStore.downloadData()
     if (result.success) {
       layer.msg(result.message, { icon: 1 })
@@ -446,7 +446,7 @@ const handleDownload = async () => {
     } else {
       layer.msg(result.message, { icon: 5 })
     }
-  })
+  }
 }
 
 const exportData = () => {

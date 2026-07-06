@@ -11,57 +11,90 @@
       </button>
     </div>
 
-    <div class="filter-bar">
-      <div class="search-box">
-        <i class="layui-icon layui-icon-search"></i>
-        <input type="text" v-model="searchKeyword" placeholder="搜索网站..." />
-      </div>
-      <div class="filter-group">
-        <select v-model="categoryFilter" class="filter-select">
-          <option value="">全部分类</option>
-          <option v-for="cat in categories" :key="cat.id" :value="cat.id">{{ cat.name }}</option>
-        </select>
-        <button class="manage-categories-btn" @click="showCategoryModal = true">
-          <i class="layui-icon layui-icon-set"></i> 管理分类
-        </button>
-      </div>
-    </div>
+    <div class="main-content">
+      <div class="sidebar">
+        <div class="sidebar-header">
+          <span class="sidebar-title">分类</span>
+          <button class="manage-categories-btn" @click="showCategoryModal = true">
+            <i class="layui-icon layui-icon-set"></i>
+          </button>
+        </div>
+        <div class="category-list">
+          <button class="category-item" :class="{ active: activeCategory === '' }" @click="activeCategory = ''">
+            <span>全部网站</span>
+            <span class="category-count">{{ links.length }}</span>
+          </button>
+          <button v-for="cat in categories" :key="cat.id" class="category-item"
+            :class="{ active: activeCategory === cat.id, editing: editingCatId === cat.id }"
+            @click="activeCategory = cat.id">
+            <div v-if="editingCatId !== cat.id" class="cat-name-wrapper" @dblclick.stop="startSidebarEdit(cat)">
+              <span>{{ cat.name }}</span>
+            </div>
+            <input v-else type="text" ref="editInputRef" class="cat-edit-input" v-model="editingCatName"
+              @blur="saveSidebarEdit(cat.id)" @keyup.enter="saveSidebarEdit(cat.id)" @keyup.esc="cancelSidebarEdit" />
+            <span class="category-count">{{ getCategoryLinks(cat.id).length }}</span>
+          </button>
+        </div>
 
-    <div class="category-tabs">
-      <button v-for="cat in categories" :key="cat.id" class="tab-btn" :class="{ active: activeCategory === cat.id }" @click="activeCategory = cat.id">
-        <i :class="cat.icon"></i>
-        {{ cat.name }}
-        <span class="tab-count">{{ getCategoryLinks(cat.id).length }}</span>
-      </button>
-    </div>
-
-    <div class="links-grid">
-      <div v-for="link in filteredLinks" :key="link.id" class="link-card" draggable="true" @dragstart="dragStart($event, link)" @dragover.prevent @drop="drop($event, link)">
-        <div class="link-icon" :style="{ background: link.color || '#3b82f6' }">
-          <i :class="link.icon || 'layui-icon layui-icon-link'"></i>
-        </div>
-        <div class="link-content">
-          <div class="link-name">{{ link.name }}</div>
-          <div class="link-url">{{ link.url }}</div>
-        </div>
-        <div class="link-stats">
-          <span class="click-count">点击 {{ link.clickCount || 0 }} 次</span>
-        </div>
-        <div class="link-actions">
-          <button class="visit-btn" @click="visitLink(link)">
-            <i class="layui-icon layui-icon-open"></i>
-          </button>
-          <button class="edit-btn" @click="editLink(link)">
-            <i class="layui-icon layui-icon-edit"></i>
-          </button>
-          <button class="delete-btn" @click="deleteLink(link.id)">
-            <i class="layui-icon layui-icon-delete"></i>
-          </button>
+        <div class="quick-stats">
+          <div class="stat-item">
+            <span class="stat-value">{{ links.length }}</span>
+            <span class="stat-label">总网站</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-value">{{ categories.length }}</span>
+            <span class="stat-label">分类数</span>
+          </div>
         </div>
       </div>
-      <div v-if="filteredLinks.length === 0" class="empty-state">
-        <i class="layui-icon layui-icon-link"></i>
-        <span>暂无网站，点击上方按钮添加</span>
+
+      <div class="content-area">
+        <div class="search-bar">
+          <div class="search-box">
+            <i class="layui-icon layui-icon-search"></i>
+            <input type="text" v-model="searchKeyword" placeholder="搜索网站..." />
+            <button v-if="searchKeyword" class="clear-search" @click="searchKeyword = ''">
+              <i class="layui-icon layui-icon-close"></i>
+            </button>
+          </div>
+          <div class="view-toggle">
+            <button class="toggle-btn" :class="{ active: viewMode === 'grid' }" @click="viewMode = 'grid'" title="网格视图">
+              <i class="layui-icon layui-icon-table"></i>
+            </button>
+            <button class="toggle-btn" :class="{ active: viewMode === 'list' }" @click="viewMode = 'list'" title="列表视图">
+              <i class="layui-icon layui-icon-list"></i>
+            </button>
+          </div>
+        </div>
+
+        <div class="links-container" :class="viewMode">
+          <div v-for="link in filteredLinks" :key="link.id" class="link-item" draggable="true"
+            @dragstart="dragStart($event, link)" @dragover.prevent @drop="drop($event, link)" @click="visitLink(link)">
+            <div class="link-icon" :style="{ background: link.color || '#3b82f6' }">
+              <i :class="link.icon || 'layui-icon layui-icon-link'"></i>
+            </div>
+            <div class="link-info">
+              <div class="link-name">{{ link.name }}</div>
+              <div class="link-url">{{ link.url }}</div>
+            </div>
+            <div class="link-meta">
+              <span class="click-count">点击 {{ link.clickCount || 0 }} 次</span>
+              <span class="link-category">{{ getCategoryName(link.categoryId) }}</span>
+            </div>
+            <div class="link-actions">
+              <button class="edit-btn" @click.stop="editLink(link)">
+                <i class="layui-icon layui-icon-edit"></i>
+              </button>
+              <button class="delete-btn" @click.stop="deleteLink(link.id)">
+                <i class="layui-icon layui-icon-delete"></i>
+              </button>
+            </div>
+          </div>
+          <div v-if="filteredLinks.length === 0" class="empty-state">
+            <i class="layui-icon layui-icon-link"></i>
+            <span>暂无网站，点击上方按钮添加</span>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -74,33 +107,55 @@
           </button>
         </div>
         <div class="modal-body">
-          <div class="form-group">
-            <label>网站名称</label>
-            <input type="text" v-model="formData.name" placeholder="请输入网站名称" class="form-input" />
-          </div>
-          <div class="form-group">
-            <label>网站 URL</label>
-            <input type="url" v-model="formData.url" placeholder="请输入网站地址" class="form-input" />
-          </div>
-          <div class="form-row">
-            <div class="form-group">
-              <label>分类</label>
-              <select v-model="formData.categoryId" class="form-select">
-                <option v-for="cat in categories" :key="cat.id" :value="cat.id">{{ cat.name }}</option>
-              </select>
+          <div class="preview-section">
+            <div class="preview-label">预览效果</div>
+            <div class="preview-card">
+              <div class="preview-icon" :style="{ background: formData.color }">
+                <i :class="formData.icon"></i>
+              </div>
+              <div class="preview-info">
+                <div class="preview-name">{{ formData.name || '网站名称' }}</div>
+                <div class="preview-url">{{ formData.url || 'https://example.com' }}</div>
+              </div>
             </div>
+          </div>
+
+          <div class="form-section">
+            <div class="form-group">
+              <label>网站名称</label>
+              <input type="text" v-model="formData.name" placeholder="请输入网站名称" class="form-input" />
+            </div>
+
+            <div class="form-group">
+              <label>网站 URL</label>
+              <input type="url" v-model="formData.url" placeholder="请输入网站地址" class="form-input" />
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label>分类</label>
+                <select v-model="formData.categoryId" class="form-select">
+                  <option v-for="cat in categories" :key="cat.id" :value="cat.id">{{ cat.name }}</option>
+                </select>
+              </div>
+            </div>
+
             <div class="form-group">
               <label>图标</label>
-              <div class="icon-picker">
-                <button v-for="icon in linkIcons" :key="icon" class="icon-btn" :class="{ active: formData.icon === icon }" @click="formData.icon = icon">
+              <div class="icon-picker-horizontal">
+                <button v-for="icon in linkIcons" :key="icon" class="icon-btn"
+                  :class="{ active: formData.icon === icon }" @click="formData.icon = icon">
                   <i :class="icon"></i>
                 </button>
               </div>
             </div>
+
             <div class="form-group">
               <label>颜色</label>
-              <div class="color-picker">
-                <button v-for="color in linkColors" :key="color" class="color-btn" :class="{ active: formData.color === color }" :style="{ background: color }" @click="formData.color = color"></button>
+              <div class="color-picker-horizontal">
+                <button v-for="color in linkColors" :key="color" class="color-btn"
+                  :class="{ active: formData.color === color }" :style="{ background: color }"
+                  @click="formData.color = color"></button>
               </div>
             </div>
           </div>
@@ -125,9 +180,17 @@
             <div v-for="cat in categories" :key="cat.id" class="category-item">
               <div class="category-info">
                 <i :class="cat.icon"></i>
-                <span>{{ cat.name }}</span>
+                <div v-if="editingCategoryId !== cat.id" class="category-name" @click="startEditCategory(cat)">
+                  {{ cat.name }}
+                </div>
+                <input v-else type="text" v-model="editingCategoryName" class="category-edit-input"
+                  @blur="saveEditCategory(cat.id)" @keyup.enter="saveEditCategory(cat.id)"
+                  @keyup.esc="cancelEditCategory" />
               </div>
               <div class="category-actions">
+                <button class="edit-cat-btn" @click="startEditCategory(cat)">
+                  <i class="layui-icon layui-icon-edit"></i>
+                </button>
                 <button class="delete-cat-btn" @click="deleteCategory(cat.id)">
                   <i class="layui-icon layui-icon-delete"></i>
                 </button>
@@ -148,39 +211,42 @@
 </template>
 
 <script setup>
-import { ref, computed, reactive } from 'vue'
+import { ref, computed, reactive, onMounted } from 'vue'
 import { useAppStore } from '@/stores/modules/app'
 import { layer } from '@layui/layui-vue'
+import { dataManager } from '@/utils/dataManager'
 
 const appStore = useAppStore()
 
-const categories = ref([
-  { id: 1, name: '开发工具', icon: 'layui-icon layui-icon-code' },
-  { id: 2, name: '学习资源', icon: 'layui-icon layui-icon-education' },
-  { id: 3, name: '新闻资讯', icon: 'layui-icon layui-icon-news' },
-  { id: 4, name: '社交娱乐', icon: 'layui-icon layui-icon-face-smile' },
-  { id: 5, name: '常用工具', icon: 'layui-icon layui-icon-tool' },
-])
+const categories = ref([])
+const links = ref([])
 
-const links = ref([
-  { id: 1, name: 'GitHub', url: 'https://github.com', categoryId: 1, icon: 'layui-icon layui-icon-code-circle', color: '#333', clickCount: 156 },
-  { id: 2, name: 'MDN', url: 'https://developer.mozilla.org', categoryId: 1, icon: 'layui-icon layui-icon-book', color: '#217346', clickCount: 89 },
-  { id: 3, name: 'Vue.js', url: 'https://vuejs.org', categoryId: 1, icon: 'layui-icon layui-icon-code-circle', color: '#42b883', clickCount: 124 },
-  { id: 4, name: '掘金', url: 'https://juejin.cn', categoryId: 2, icon: 'layui-icon layui-icon-note', color: '#1e80ff', clickCount: 67 },
-  { id: 5, name: 'LeetCode', url: 'https://leetcode.cn', categoryId: 2, icon: 'layui-icon layui-icon-list', color: '#f5a623', clickCount: 234 },
-  { id: 6, name: '知乎', url: 'https://zhihu.com', categoryId: 3, icon: 'layui-icon layui-icon-link', color: '#0084ff', clickCount: 45 },
-  { id: 7, name: 'B站', url: 'https://bilibili.com', categoryId: 4, icon: 'layui-icon layui-icon-play', color: '#fb7299', clickCount: 189 },
-  { id: 8, name: '百度', url: 'https://baidu.com', categoryId: 5, icon: 'layui-icon layui-icon-search', color: '#2932e1', clickCount: 312 },
-])
+const loadBookmarks = () => {
+  links.value = dataManager.bookmarks.getAll()
+}
+
+const loadCategories = () => {
+  categories.value = dataManager.categories.getAll()
+}
+
+onMounted(() => {
+  loadBookmarks()
+  loadCategories()
+})
 
 const searchKeyword = ref('')
-const categoryFilter = ref('')
 const activeCategory = ref('')
+const viewMode = ref('grid')
 const showAddModal = ref(false)
 const showCategoryModal = ref(false)
 const editingLink = ref(null)
 const newCategoryName = ref('')
 const draggedLink = ref(null)
+const editingCategoryId = ref(null)
+const editingCategoryName = ref('')
+const editingCatId = ref(null)
+const editingCatName = ref('')
+const editInputRef = ref(null)
 
 const linkIcons = [
   'layui-icon layui-icon-code-circle',
@@ -210,21 +276,19 @@ const themeStyle = computed(() => ({
 
 const filteredLinks = computed(() => {
   let result = links.value
-  
+
   if (activeCategory.value) {
     result = result.filter(l => l.categoryId === Number(activeCategory.value))
-  } else if (categoryFilter.value) {
-    result = result.filter(l => l.categoryId === Number(categoryFilter.value))
   }
-  
+
   if (searchKeyword.value) {
     const keyword = searchKeyword.value.toLowerCase()
-    result = result.filter(l => 
-      l.name.toLowerCase().includes(keyword) || 
+    result = result.filter(l =>
+      l.name.toLowerCase().includes(keyword) ||
       l.url.toLowerCase().includes(keyword)
     )
   }
-  
+
   return result
 })
 
@@ -232,9 +296,18 @@ const getCategoryLinks = (categoryId) => {
   return links.value.filter(l => l.categoryId === categoryId)
 }
 
+const getCategoryName = (categoryId) => {
+  const cat = categories.value.find(c => c.id === categoryId)
+  return cat ? cat.name : ''
+}
+
 const visitLink = (link) => {
-  link.clickCount++
+  dataManager.bookmarks.update({
+    id: link.id,
+    clickCount: (link.clickCount || 0) + 1
+  })
   window.open(link.url, '_blank')
+  loadBookmarks()
 }
 
 const editLink = (link) => {
@@ -266,31 +339,41 @@ const saveLink = () => {
     layer.msg('请输入网站地址', { icon: 5 })
     return
   }
+
   if (editingLink.value) {
-    const index = links.value.findIndex(l => l.id === editingLink.value.id)
-    if (index !== -1) {
-      links.value[index] = { ...formData, id: editingLink.value.id, clickCount: editingLink.value.clickCount }
-      layer.msg('修改成功', { icon: 1 })
-    }
+    dataManager.bookmarks.update(editingLink.value.id, {
+      name: formData.name.trim(),
+      url: formData.url.trim(),
+      categoryId: formData.categoryId,
+      icon: formData.icon,
+      color: formData.color
+    })
+    layer.msg('修改成功', { icon: 1 })
   } else {
-    links.value.push({
-      ...formData,
-      id: Date.now(),
-      clickCount: 0
+    dataManager.bookmarks.add({
+      name: formData.name.trim(),
+      url: formData.url.trim(),
+      categoryId: formData.categoryId,
+      icon: formData.icon,
+      color: formData.color
     })
     layer.msg('添加成功', { icon: 1 })
   }
+
+  loadBookmarks()
   closeAddModal()
 }
 
 const deleteLink = (id) => {
-  layer.confirm('确定删除该网站吗？', { icon: 3 }, () => {
-    const index = links.value.findIndex(l => l.id === id)
-    if (index !== -1) {
-      links.value.splice(index, 1)
+  if (confirm('确定删除该网站吗？')) {
+    const success = dataManager.bookmarks.delete(id)
+    if (success) {
+      bookmarks.value = bookmarks.value.filter(b => String(b.id) !== String(id))
       layer.msg('删除成功', { icon: 1 })
+    } else {
+      layer.msg('删除失败', { icon: 5 })
     }
-  })
+  }
 }
 
 const closeCategoryModal = () => {
@@ -303,12 +386,12 @@ const addCategory = () => {
     layer.msg('请输入分类名称', { icon: 5 })
     return
   }
-  categories.value.push({
-    id: Date.now(),
+  dataManager.categories.add({
     name: newCategoryName.value,
     icon: 'layui-icon layui-icon-link'
   })
   newCategoryName.value = ''
+  loadCategories()
   layer.msg('添加成功', { icon: 1 })
 }
 
@@ -318,11 +401,70 @@ const deleteCategory = (id) => {
     layer.msg('该分类下还有网站，请先删除网站', { icon: 5 })
     return
   }
-  const index = categories.value.findIndex(c => c.id === id)
-  if (index !== -1) {
-    categories.value.splice(index, 1)
+  const success = dataManager.categories.delete(id)
+  if (success) {
+    categories.value = categories.value.filter(c => String(c.id) !== String(id))
     layer.msg('删除成功', { icon: 1 })
+  } else {
+    layer.msg('删除失败', { icon: 5 })
   }
+}
+
+const startEditCategory = (cat) => {
+  editingCategoryId.value = cat.id
+  editingCategoryName.value = cat.name
+}
+
+const saveEditCategory = (id) => {
+  if (!editingCategoryName.value.trim()) {
+    layer.msg('分类名称不能为空', { icon: 5 })
+    return
+  }
+  dataManager.categories.update({
+    id: id,
+    name: editingCategoryName.value.trim()
+  })
+  loadCategories()
+  layer.msg('修改成功', { icon: 1 })
+  editingCategoryId.value = null
+  editingCategoryName.value = ''
+}
+
+const cancelEditCategory = () => {
+  editingCategoryId.value = null
+  editingCategoryName.value = ''
+}
+
+const startSidebarEdit = (cat) => {
+  editingCatId.value = cat.id
+  editingCatName.value = cat.name
+  setTimeout(() => {
+    const input = document.querySelector('.cat-edit-input')
+    if (input) {
+      input.focus()
+      input.select()
+    }
+  }, 100)
+}
+
+const saveSidebarEdit = (id) => {
+  if (!editingCatName.value.trim()) {
+    layer.msg('分类名称不能为空', { icon: 5 })
+    return
+  }
+  dataManager.categories.update({
+    id: id,
+    name: editingCatName.value.trim()
+  })
+  loadCategories()
+  layer.msg('修改成功', { icon: 1 })
+  editingCatId.value = null
+  editingCatName.value = ''
+}
+
+const cancelSidebarEdit = () => {
+  editingCatId.value = null
+  editingCatName.value = ''
 }
 
 const dragStart = (event, link) => {
@@ -332,15 +474,17 @@ const dragStart = (event, link) => {
 
 const drop = (event, targetLink) => {
   if (!draggedLink.value || draggedLink.value.id === targetLink.id) return
-  
-  const draggedIndex = links.value.findIndex(l => l.id === draggedLink.value.id)
-  const targetIndex = links.value.findIndex(l => l.id === targetLink.id)
-  
+
+  const list = links.value
+  const draggedIndex = list.findIndex(l => l.id === draggedLink.value.id)
+  const targetIndex = list.findIndex(l => l.id === targetLink.id)
+
   if (draggedIndex !== -1 && targetIndex !== -1) {
-    const [removed] = links.value.splice(draggedIndex, 1)
-    links.value.splice(targetIndex, 0, removed)
+    const [removed] = list.splice(draggedIndex, 1)
+    list.splice(targetIndex, 0, removed)
+    dataManager.bookmarks.saveAll(list)
   }
-  
+
   draggedLink.value = null
 }
 </script>
@@ -348,13 +492,17 @@ const drop = (event, targetLink) => {
 <style scoped>
 .bookmarks-page {
   padding: 24px;
+  height: calc(100vh - 120px);
+  display: flex;
+  flex-direction: column;
 }
 
 .page-header {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  margin-bottom: 24px;
+  margin-bottom: 20px;
+  flex-shrink: 0;
 }
 
 .page-title {
@@ -389,25 +537,185 @@ const drop = (event, targetLink) => {
   box-shadow: 0 6px 16px color-mix(in srgb, var(--primary-color, #1e4d7b) 30%, transparent);
 }
 
-.filter-bar {
+.main-content {
+  flex: 1;
+  display: flex;
+  gap: 20px;
+  overflow: hidden;
+}
+
+.sidebar {
+  width: 220px;
+  flex-shrink: 0;
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.sidebar-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 20px;
-  padding: 16px;
+  padding: 16px 20px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.sidebar-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #64748b;
+}
+
+.manage-categories-btn {
+  background: none;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+  font-size: 16px;
+  padding: 4px;
+}
+
+.manage-categories-btn:hover {
+  color: #64748b;
+}
+
+.category-list {
+  flex: 1;
+  padding: 12px;
+  overflow-y: auto;
+}
+
+.category-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 12px;
+  background: none;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  font-size: 14px;
+  color: #475569;
+  transition: all 0.2s ease;
+  text-align: left;
+}
+
+.category-item:hover {
+  background: #f8fafc;
+}
+
+.category-item.active {
+  background: color-mix(in srgb, var(--primary-color, #1e4d7b) 10%, transparent);
+  color: var(--primary-color, #1e4d7b);
+  font-weight: 500;
+}
+
+.category-item i {
+  font-size: 16px;
+  width: 20px;
+}
+
+.category-item span {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cat-name-wrapper {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.cat-name-wrapper:hover {
+  text-decoration: underline;
+}
+
+.cat-edit-input {
+  flex: 1;
+  padding: 4px 8px;
+  border: 2px solid var(--primary-color, #1e4d7b);
+  border-radius: 6px;
+  font-size: 14px;
+  color: #334155;
+  outline: none;
   background: #fff;
-  border-radius: 12px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
+}
+
+.category-item.editing {
+  background: color-mix(in srgb, var(--primary-color, #1e4d7b) 5%, transparent);
+}
+
+.category-count {
+  background: #f1f5f9;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 12px;
+  color: #94a3b8;
+  flex-shrink: 0;
+}
+
+.category-item.active .category-count {
+  background: rgba(30, 77, 123, 0.15);
+  color: var(--primary-color, #1e4d7b);
+}
+
+.quick-stats {
+  padding: 16px 20px;
+  border-top: 1px solid #f1f5f9;
+  background: #f8fafc;
+}
+
+.stat-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.stat-value {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--primary-color, #1e4d7b);
+}
+
+.stat-label {
+  font-size: 12px;
+  color: #94a3b8;
+}
+
+.content-area {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.search-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+  flex-shrink: 0;
 }
 
 .search-box {
   display: flex;
   align-items: center;
   gap: 8px;
-  background: #f8fafc;
-  border-radius: 8px;
-  padding: 8px 16px;
-  width: 280px;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 10px 16px;
+  flex: 1;
+  max-width: 400px;
 }
 
 .search-box input {
@@ -423,170 +731,188 @@ const drop = (event, targetLink) => {
   color: #94a3b8;
 }
 
-.filter-group {
-  display: flex;
-  gap: 12px;
-  align-items: center;
-}
-
-.filter-select {
-  padding: 8px 12px;
-  border: 1px solid #e2e8f0;
-  border-radius: 8px;
-  font-size: 13px;
-  color: #64748b;
-  outline: none;
-}
-
-.manage-categories-btn {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 8px 12px;
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
-  border-radius: 8px;
-  font-size: 13px;
-  color: #64748b;
+.clear-search {
+  background: none;
+  border: none;
+  color: #94a3b8;
   cursor: pointer;
+  font-size: 14px;
 }
 
-.category-tabs {
-  display: flex;
-  gap: 10px;
-  margin-bottom: 20px;
-  flex-wrap: wrap;
+.clear-search:hover {
+  color: #64748b;
 }
 
-.tab-btn {
+.view-toggle {
   display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 8px 16px;
+  gap: 4px;
   background: #fff;
   border: 1px solid #e2e8f0;
-  border-radius: 20px;
-  font-size: 13px;
-  color: #64748b;
-  cursor: pointer;
-  transition: all 0.2s ease;
+  border-radius: 8px;
+  padding: 4px;
 }
 
-.tab-btn.active {
-  background: var(--primary-color, #1e4d7b);
-  border-color: var(--primary-color, #1e4d7b);
-  color: #fff;
-}
-
-.tab-count {
-  background: color-mix(in srgb, #94a3b8 20%, transparent);
-  padding: 2px 8px;
-  border-radius: 10px;
-  font-size: 11px;
-}
-
-.tab-btn.active .tab-count {
-  background: rgba(255, 255, 255, 0.2);
-}
-
-.links-grid {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 20px;
-}
-
-.link-card {
-  background: #fff;
-  border-radius: 16px;
-  padding: 20px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  text-align: center;
-  cursor: move;
-  transition: all 0.25s ease;
-}
-
-.link-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
-}
-
-.link-card.dragging {
-  opacity: 0.5;
-}
-
-.link-icon {
-  width: 56px;
-  height: 56px;
-  border-radius: 16px;
+.toggle-btn {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 28px;
-  color: #fff;
-  margin-bottom: 12px;
+  width: 36px;
+  height: 32px;
+  background: none;
+  border: none;
+  border-radius: 6px;
+  color: #94a3b8;
+  cursor: pointer;
+  font-size: 16px;
+  transition: all 0.2s ease;
 }
 
-.link-content {
+.toggle-btn:hover {
+  background: #f8fafc;
+}
+
+.toggle-btn.active {
+  background: color-mix(in srgb, var(--primary-color, #1e4d7b) 10%, transparent);
+  color: var(--primary-color, #1e4d7b);
+}
+
+.links-container {
   flex: 1;
+  overflow-y: auto;
+  padding-right: 8px;
+}
+
+.links-container.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 12px;
+}
+
+.links-container.list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.link-item {
+  background: #fff;
+  border-radius: 10px;
+  padding: 12px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.links-container.grid .link-item {
+  flex-direction: column;
+  text-align: center;
+  gap: 8px;
+  padding: 14px;
+}
+
+.link-item:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+}
+
+.link-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  color: #fff;
+  flex-shrink: 0;
+}
+
+.links-container.grid .link-icon {
+  width: 40px;
+  height: 40px;
+  font-size: 20px;
+}
+
+.link-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.links-container.grid .link-info {
+  flex: none;
+  width: 100%;
 }
 
 .link-name {
-  font-size: 15px;
+  font-size: 13px;
   font-weight: 600;
   color: #334155;
-  margin-bottom: 4px;
+  margin-bottom: 2px;
 }
 
 .link-url {
-  font-size: 12px;
+  font-size: 11px;
   color: #94a3b8;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.link-stats {
-  margin-top: 12px;
+.link-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 10px;
+  color: #94a3b8;
+  flex-shrink: 0;
+}
+
+.links-container.grid .link-meta {
+  flex: none;
 }
 
 .click-count {
-  font-size: 12px;
-  color: #94a3b8;
+  display: inline-flex;
+  align-items: center;
+}
+
+.link-category {
+  background: #f1f5f9;
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-size: 11px;
+  display: inline-block;
 }
 
 .link-actions {
   display: flex;
-  gap: 8px;
-  margin-top: 12px;
+  gap: 6px;
+  opacity: 0;
+  transition: opacity 0.2s ease;
 }
 
-.visit-btn,
+.link-item:hover .link-actions {
+  opacity: 1;
+}
+
+.links-container.grid .link-actions {
+  opacity: 1;
+}
+
 .edit-btn,
 .delete-btn {
-  width: 32px;
-  height: 32px;
+  width: 30px;
+  height: 30px;
   display: flex;
   align-items: center;
   justify-content: center;
   border: none;
   border-radius: 8px;
   cursor: pointer;
-  opacity: 0;
-  transition: all 0.2s ease;
-}
-
-.link-card:hover .visit-btn,
-.link-card:hover .edit-btn,
-.link-card:hover .delete-btn {
-  opacity: 1;
-}
-
-.visit-btn {
-  background: color-mix(in srgb, var(--primary-color, #1e4d7b) 10%, transparent);
-  color: var(--primary-color, #1e4d7b);
+  font-size: 14px;
 }
 
 .edit-btn {
@@ -600,12 +926,12 @@ const drop = (event, targetLink) => {
 }
 
 .empty-state {
-  grid-column: span 4;
+  grid-column: 1 / -1;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 60px;
+  padding: 80px 40px;
   color: #94a3b8;
   gap: 12px;
 }
@@ -631,6 +957,10 @@ const drop = (event, targetLink) => {
   background: #fff;
   border-radius: 16px;
   width: 500px;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 
 .modal-header {
@@ -656,6 +986,67 @@ const drop = (event, targetLink) => {
 }
 
 .modal-body {
+  padding: 0;
+  flex: 1;
+  overflow-y: auto;
+}
+
+.preview-section {
+  padding: 24px;
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.preview-label {
+  font-size: 12px;
+  font-weight: 500;
+  color: #94a3b8;
+  margin-bottom: 12px;
+}
+
+.preview-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: #fff;
+  padding: 16px;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.preview-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  color: #fff;
+  flex-shrink: 0;
+}
+
+.preview-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.preview-name {
+  font-size: 15px;
+  font-weight: 600;
+  color: #334155;
+  margin-bottom: 4px;
+}
+
+.preview-url {
+  font-size: 12px;
+  color: #94a3b8;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.form-section {
   padding: 24px;
 }
 
@@ -693,6 +1084,12 @@ const drop = (event, targetLink) => {
   gap: 12px;
 }
 
+.icon-picker-horizontal {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
 .icon-picker {
   display: flex;
   flex-wrap: wrap;
@@ -700,19 +1097,29 @@ const drop = (event, targetLink) => {
 }
 
 .icon-btn {
-  width: 36px;
-  height: 36px;
+  width: 40px;
+  height: 40px;
   background: #f8fafc;
   border: 2px solid transparent;
-  border-radius: 8px;
+  border-radius: 10px;
   cursor: pointer;
-  font-size: 16px;
+  font-size: 18px;
   color: #64748b;
+  transition: all 0.2s ease;
+}
+
+.icon-btn:hover {
+  background: #f1f5f9;
 }
 
 .icon-btn.active {
   border-color: var(--primary-color, #1e4d7b);
   background: color-mix(in srgb, var(--primary-color, #1e4d7b) 10%, transparent);
+}
+
+.color-picker-horizontal {
+  display: flex;
+  gap: 10px;
 }
 
 .color-picker {
@@ -721,11 +1128,16 @@ const drop = (event, targetLink) => {
 }
 
 .color-btn {
-  width: 28px;
-  height: 28px;
-  border: 2px solid transparent;
-  border-radius: 6px;
+  width: 32px;
+  height: 32px;
+  border: 3px solid transparent;
+  border-radius: 8px;
   cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.color-btn:hover {
+  transform: scale(1.1);
 }
 
 .color-btn.active {
@@ -756,12 +1168,38 @@ const drop = (event, targetLink) => {
   color: #334155;
 }
 
+.edit-cat-btn,
 .delete-cat-btn {
   padding: 6px;
   background: none;
   border: none;
-  color: #ef4444;
   cursor: pointer;
+  font-size: 14px;
+}
+
+.edit-cat-btn {
+  color: #64748b;
+}
+
+.delete-cat-btn {
+  color: #ef4444;
+}
+
+.category-name {
+  cursor: pointer;
+}
+
+.category-name:hover {
+  color: var(--primary-color, #1e4d7b);
+}
+
+.category-edit-input {
+  padding: 4px 8px;
+  border: 1px solid var(--primary-color, #1e4d7b);
+  border-radius: 4px;
+  font-size: 14px;
+  color: #334155;
+  outline: none;
 }
 
 .add-category {
@@ -810,33 +1248,50 @@ const drop = (event, targetLink) => {
   cursor: pointer;
 }
 
-@media (max-width: 1200px) {
-  .links-grid {
-    grid-template-columns: repeat(3, 1fr);
-  }
-
-  .empty-state {
-    grid-column: span 3;
-  }
-}
-
 @media (max-width: 900px) {
-  .links-grid {
-    grid-template-columns: repeat(2, 1fr);
+  .sidebar {
+    width: 180px;
   }
 
-  .empty-state {
-    grid-column: span 2;
+  .links-container.grid {
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
   }
 }
 
 @media (max-width: 600px) {
-  .links-grid {
-    grid-template-columns: 1fr;
+  .main-content {
+    flex-direction: column;
   }
 
-  .empty-state {
-    grid-column: span 1;
+  .sidebar {
+    width: 100%;
+    flex-shrink: 0;
+  }
+
+  .category-list {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 12px;
+  }
+
+  .category-item {
+    padding: 8px 12px;
+    border-radius: 20px;
+    font-size: 13px;
+  }
+
+  .category-count {
+    display: none;
+  }
+
+  .quick-stats {
+    display: none;
+  }
+
+  .links-container.grid {
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
   }
 
   .form-row {

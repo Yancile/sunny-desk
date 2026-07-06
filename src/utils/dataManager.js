@@ -1,3 +1,5 @@
+import { reactive } from 'vue'
+
 const STORAGE_KEY = 'self_manage_system_data'
 
 const defaultData = {
@@ -29,7 +31,7 @@ const defaultData = {
   ],
   todos: [
     {
-      id: 1,
+      id: '1',
       title: '网页设计',
       description: '',
       quadrant: 'important-not-urgent',
@@ -39,7 +41,7 @@ const defaultData = {
       category: 'work'
     },
     {
-      id: 2,
+      id: '2',
       title: '学习vue',
       description: '',
       quadrant: 'important-urgent',
@@ -56,11 +58,233 @@ const defaultData = {
     { id: 4, date: '2026-06-28', mood: 'relaxed', weather: '晴', content: '周末和朋友去郊外徒步，呼吸新鲜空气，欣赏大自然的美景。身心都得到了放松。', tags: ['旅行', '朋友'] },
     { id: 5, date: '2026-06-27', mood: 'tired', weather: '阴', content: '连续工作一周，今天感觉特别疲惫。早点休息，明天又是新的一天。', tags: ['休息'] },
   ],
-  notes: [],
+  notes: [
+    { id: 1, title: '第一章概述', notebookId: 1, sectionId: 1, parentId: null, content: '# 第一章概述\n\n## 数据结构的基本概念\n\n数据结构是计算机存储、组织数据的方式。\n\n### 基本术语\n\n- 数据\n- 数据元素\n- 数据项', tags: [], createdAt: '2026-04-22T22:46', updatedAt: '2026-04-22T22:46' },
+    { id: 2, title: '数据的定义', notebookId: 1, sectionId: 1, parentId: 1, content: '# 数据的定义\n\n数据是描述客观事物的符号，是计算机中可以操作的对象。', tags: [], createdAt: '2026-04-22T22:50', updatedAt: '2026-04-22T22:50' },
+    { id: 3, title: '数据元素', notebookId: 1, sectionId: 1, parentId: 1, content: '# 数据元素\n\n数据元素是数据的基本单位，在计算机程序中通常作为一个整体进行考虑和处理。', tags: [], createdAt: '2026-04-22T22:52', updatedAt: '2026-04-22T22:52' },
+    { id: 4, title: '第二章线性表', notebookId: 1, sectionId: 2, parentId: null, content: '# 第二章线性表\n\n## 线性表的定义\n\n线性表是具有相同特性的数据元素的一个有限序列。', tags: [], createdAt: '2026-04-25T14:30', updatedAt: '2026-04-25T14:30' },
+    { id: 5, title: '线性表的顺序存储', notebookId: 1, sectionId: 2, parentId: 4, content: '# 线性表的顺序存储\n\n用一组地址连续的存储单元依次存储线性表的数据元素。', tags: [], createdAt: '2026-04-25T14:40', updatedAt: '2026-04-25T14:40' },
+    { id: 6, title: '第三章栈和队列', notebookId: 1, sectionId: 3, parentId: null, content: '# 第三章栈和队列\n\n## 栈\n\n栈是一种特殊的线性表，只能在一端进行插入和删除操作。', tags: [], createdAt: '2026-04-28T10:15', updatedAt: '2026-04-28T10:15' },
+    { id: 7, title: '计算机系统概述', notebookId: 2, sectionId: 8, parentId: null, content: '# 第一章 计算机系统概述\n\n## 冯·诺依曼结构\n\n冯·诺依曼计算机由五大部件组成。', tags: [], createdAt: '2026-05-01T09:00', updatedAt: '2026-05-01T09:00' },
+    { id: 8, title: '数据的表示和运算', notebookId: 2, sectionId: 9, parentId: null, content: '# 第二章 数据的表示和运算\n\n## 数制转换\n\n二进制、八进制、十进制、十六进制之间的转换方法。', tags: [], createdAt: '2026-05-05T16:20', updatedAt: '2026-05-05T16:20' },
+  ],
+  notebooks: [
+    { id: 1, name: '数据结构', icon: '📘', color: '#3b82f6' },
+    { id: 2, name: '组成原理', icon: '📗', color: '#10b981' },
+    { id: 3, name: '408', icon: '📕', color: '#ef4444' },
+    { id: 4, name: '英语', icon: '📙', color: '#f59e0b' },
+  ],
+  sections: [
+    { id: 1, notebookId: 1, parentId: null, name: '第一章' },
+    { id: 2, notebookId: 1, parentId: null, name: '第二章' },
+    { id: 3, notebookId: 1, parentId: null, name: '第三章' },
+    { id: 4, notebookId: 1, parentId: null, name: '第四章' },
+    { id: 5, notebookId: 1, parentId: null, name: '第五章' },
+    { id: 6, notebookId: 1, parentId: null, name: '第六章' },
+    { id: 7, notebookId: 1, parentId: null, name: '第七章' },
+    { id: 8, notebookId: 2, parentId: null, name: '第一章 计算机系统概述' },
+    { id: 9, notebookId: 2, parentId: null, name: '第二章 数据的表示和运算' },
+    { id: 10, notebookId: 2, parentId: null, name: '第三章 存储器层次结构' },
+    { id: 11, notebookId: 1, parentId: 1, name: '1.1 数据结构的基本概念' },
+    { id: 12, notebookId: 1, parentId: 1, name: '1.2 算法和算法分析' },
+    { id: 13, notebookId: 1, parentId: 2, name: '2.1 线性表的定义和特点' },
+    { id: 14, notebookId: 1, parentId: 2, name: '2.2 线性表的顺序表示' },
+    { id: 15, notebookId: 1, parentId: 11, name: '1.1.1 数据' },
+  ],
   bookmarks: [],
-  goals: [],
-  memos: [],
-  schedules: [],
+  categories: [
+    { id: 1, name: '开发工具', icon: 'layui-icon layui-icon-code' },
+    { id: 2, name: '学习资源', icon: 'layui-icon layui-icon-education' },
+    { id: 3, name: '新闻资讯', icon: 'layui-icon layui-icon-news' },
+    { id: 4, name: '社交娱乐', icon: 'layui-icon layui-icon-face-smile' },
+    { id: 5, name: '常用工具', icon: 'layui-icon layui-icon-tool' },
+  ],
+  goals: [
+    {
+      id: 1,
+      title: '完成年度学习计划',
+      description: '掌握Vue3、TypeScript等前端技术，提升专业能力',
+      category: 'study',
+      deadline: '2026-12-31',
+      progress: 45,
+      milestones: [
+        { title: 'Vue3基础学习', date: '2026-03-31', completed: true },
+        { title: 'TypeScript进阶', date: '2026-06-30', completed: true },
+        { title: '项目实战', date: '2026-09-30', completed: false },
+        { title: '技术总结', date: '2026-12-31', completed: false }
+      ]
+    },
+    {
+      id: 2,
+      title: '健身目标 - 减脂塑形',
+      description: '通过规律运动和健康饮食，达到理想体型',
+      category: 'fitness',
+      deadline: '2026-09-30',
+      progress: 30,
+      milestones: [
+        { title: '减重5kg', date: '2026-05-31', completed: true },
+        { title: '减重10kg', date: '2026-07-31', completed: false },
+        { title: '体脂率达标', date: '2026-09-30', completed: false }
+      ]
+    },
+    {
+      id: 3,
+      title: '阅读20本书',
+      description: '涵盖技术、管理、文学等多个领域',
+      category: 'life',
+      deadline: '2026-12-31',
+      progress: 25,
+      milestones: [
+        { title: '完成5本', date: '2026-03-31', completed: true },
+        { title: '完成10本', date: '2026-06-30', completed: false },
+        { title: '完成15本', date: '2026-09-30', completed: false },
+        { title: '完成20本', date: '2026-12-31', completed: false }
+      ]
+    },
+    {
+      id: 4,
+      title: '财务目标 - 存款计划',
+      description: '制定合理的储蓄计划，实现财务自由',
+      category: 'finance',
+      deadline: '2026-12-31',
+      progress: 60,
+      milestones: [
+        { title: '存满1万元', date: '2026-03-31', completed: true },
+        { title: '存满3万元', date: '2026-06-30', completed: true },
+        { title: '存满5万元', date: '2026-09-30', completed: false },
+        { title: '存满8万元', date: '2026-12-31', completed: false }
+      ]
+    },
+    {
+      id: 5,
+      title: '项目管理能力提升',
+      description: '学习项目管理方法论，提升团队协作效率',
+      category: 'work',
+      deadline: '2026-08-31',
+      progress: 75,
+      milestones: [
+        { title: 'PMP认证学习', date: '2026-04-30', completed: true },
+        { title: '项目实战应用', date: '2026-06-30', completed: true },
+        { title: '团队培训', date: '2026-08-31', completed: false }
+      ]
+    }
+  ],
+  memos: [
+    {
+      id: 1,
+      title: '会议记录',
+      content: '今天下午的项目会议讨论了Q3的工作计划，需要完成以下任务：1. 需求文档编写 2. 技术方案设计 3. 资源协调',
+      color: 'yellow',
+      pinned: true,
+      reminder: '',
+      createdAt: '2026-07-01T14:30',
+      archived: false
+    },
+    {
+      id: 2,
+      title: '购物清单',
+      content: '牛奶、面包、鸡蛋、水果、蔬菜',
+      color: 'green',
+      pinned: false,
+      reminder: '2026-07-02T18:00',
+      createdAt: '2026-07-01T10:00',
+      archived: false
+    },
+    {
+      id: 3,
+      title: '学习笔记',
+      content: 'Vue3 Composition API的核心概念：ref、reactive、computed、watch、生命周期钩子',
+      color: 'blue',
+      pinned: false,
+      reminder: '',
+      createdAt: '2026-06-30T20:00',
+      archived: false
+    },
+    {
+      id: 4,
+      title: '重要提醒',
+      content: '明天上午9点有客户电话会议，准备好演示材料',
+      color: 'pink',
+      pinned: true,
+      reminder: '2026-07-02T08:30',
+      createdAt: '2026-07-01T16:00',
+      archived: false
+    },
+    {
+      id: 5,
+      title: '阅读推荐',
+      content: '《深入理解计算机系统》《代码大全》《设计模式》',
+      color: 'purple',
+      pinned: false,
+      reminder: '',
+      createdAt: '2026-06-29T15:00',
+      archived: true
+    }
+  ],
+  schedules: [
+    { id: 1, title: '产品需求评审', date: '2026-07-01', time: '09:30', location: '会议室A', description: '讨论Q3产品需求', color: '#1e4d7b', repeat: 'none', completed: false },
+    { id: 2, title: '客户电话会议', date: '2026-07-01', time: '14:00', location: '线上', description: '与客户沟通项目进展', color: '#0d9488', repeat: 'none', completed: false },
+    { id: 3, title: '团队周会', date: '2026-07-02', time: '10:00', location: '会议室B', color: '#8b5cf6', repeat: 'weekly', completed: false },
+    { id: 4, title: '代码审查', date: '2026-07-03', time: '15:00', location: '线上', description: '审查团队成员提交的代码', color: '#f59e0b', repeat: 'none', completed: false },
+    { id: 5, title: '健身', date: '2026-07-04', time: '18:00', location: '健身房', color: '#ef4444', repeat: 'daily', completed: false },
+    { id: 6, title: '学习Vue3', date: '2026-07-05', time: '20:00', location: '家里', description: '学习组合式API', color: '#10b981', repeat: 'none', completed: false },
+  ],
+  habits: [
+    {
+      id: '1',
+      name: '早起',
+      icon: 'layui-icon layui-icon-sunny',
+      color: '#f59e0b',
+      streak: 15,
+      todayChecked: true,
+      checkedDays: ['2026-06-25', '2026-06-26', '2026-06-27', '2026-06-28', '2026-06-29', '2026-06-30', '2026-07-01']
+    },
+    {
+      id: '2',
+      name: '阅读',
+      icon: 'layui-icon layui-icon-book',
+      color: '#8b5cf6',
+      streak: 8,
+      todayChecked: false,
+      checkedDays: ['2026-06-24', '2026-06-25', '2026-06-26', '2026-06-27', '2026-06-28', '2026-06-29', '2026-06-30']
+    },
+    {
+      id: '3',
+      name: '运动',
+      icon: 'layui-icon layui-icon-heart',
+      color: '#ef4444',
+      streak: 5,
+      todayChecked: false,
+      checkedDays: ['2026-06-27', '2026-06-28', '2026-06-29', '2026-06-30', '2026-07-01']
+    },
+    {
+      id: '4',
+      name: '冥想',
+      icon: 'layui-icon layui-icon-face-smile',
+      color: '#10b981',
+      streak: 21,
+      todayChecked: true,
+      checkedDays: ['2026-06-11', '2026-06-12', '2026-06-13', '2026-06-14', '2026-06-15', '2026-06-16', '2026-06-17']
+    },
+    {
+      id: '5',
+      name: '写日记',
+      icon: 'layui-icon layui-icon-file',
+      color: '#3b82f6',
+      streak: 3,
+      todayChecked: false,
+      checkedDays: ['2026-06-29', '2026-06-30', '2026-07-01']
+    },
+    {
+      id: '6',
+      name: '代码练习',
+      icon: 'layui-icon layui-icon-code',
+      color: '#ec4899',
+      streak: 10,
+      todayChecked: true,
+      checkedDays: ['2026-06-22', '2026-06-23', '2026-06-24', '2026-06-25', '2026-06-26', '2026-06-27', '2026-06-28']
+    }
+  ],
   lastSyncTime: null,
   lastModifiedTime: Date.now(),
   version: '1.0.0',
@@ -73,15 +297,15 @@ const loadData = () => {
   try {
     const stored = localStorage.getItem(STORAGE_KEY)
     if (stored) {
-      appData = JSON.parse(stored)
+      appData = reactive(JSON.parse(stored))
       validateData()
     } else {
-      appData = JSON.parse(JSON.stringify(defaultData))
+      appData = reactive(JSON.parse(JSON.stringify(defaultData)))
       saveData()
     }
   } catch (error) {
     console.error('加载数据失败:', error)
-    appData = JSON.parse(JSON.stringify(defaultData))
+    appData = reactive(JSON.parse(JSON.stringify(defaultData)))
     saveData()
   }
   return appData
@@ -89,11 +313,47 @@ const loadData = () => {
 
 const validateData = () => {
   const defaults = defaultData
+  let needsSave = false
   Object.keys(defaults).forEach(key => {
     if (appData[key] === undefined) {
       appData[key] = JSON.parse(JSON.stringify(defaults[key]))
+      needsSave = true
     }
   })
+  const modules = ['users', 'todos', 'diaries', 'notes', 'goals', 'memos', 'notebooks', 'sections', 'habits', 'schedules', 'bookmarks', 'categories']
+  modules.forEach(moduleName => {
+    if (appData[moduleName]) {
+      appData[moduleName].forEach(item => {
+        if (typeof item.id !== 'string') {
+          item.id = String(item.id)
+          needsSave = true
+        }
+        if (item.notebookId && typeof item.notebookId !== 'string') {
+          item.notebookId = String(item.notebookId)
+          needsSave = true
+        }
+        if (item.sectionId && typeof item.sectionId !== 'string') {
+          item.sectionId = String(item.sectionId)
+          needsSave = true
+        }
+      })
+    }
+  })
+  if (appData.todos) {
+    appData.todos.forEach(todo => {
+      if (!todo.quadrant) {
+        todo.quadrant = 'important-not-urgent'
+        needsSave = true
+      }
+      if (!todo.status) {
+        todo.status = 'pending'
+        needsSave = true
+      }
+    })
+  }
+  if (needsSave) {
+    saveData()
+  }
 }
 
 let onDataChangedCallback = null
@@ -149,10 +409,10 @@ const generateId = () => {
 
 const userModule = {
   getAll: () => {
-    return getData().users.sort((a, b) => b.id - a.id)
+    return getData().users.slice().reverse()
   },
   getById: (id) => {
-    return getData().users.find(u => u.id === id)
+    return getData().users.find(u => String(u.id) === String(id))
   },
   getByUsername: (username) => {
     return getData().users.find(u => u.username === username)
@@ -168,7 +428,7 @@ const userModule = {
     return newUser
   },
   update: (user) => {
-    const index = getData().users.findIndex(u => u.id === user.id)
+    const index = getData().users.findIndex(u => String(u.id) === String(user.id))
     if (index !== -1) {
       getData().users[index] = { ...getData().users[index], ...user }
       saveData()
@@ -177,7 +437,7 @@ const userModule = {
     return null
   },
   delete: (id) => {
-    const index = getData().users.findIndex(u => u.id === id)
+    const index = getData().users.findIndex(u => String(u.id) === String(id))
     if (index !== -1) {
       getData().users.splice(index, 1)
       saveData()
@@ -186,7 +446,7 @@ const userModule = {
     return false
   },
   updateStatus: (id, status) => {
-    const user = getData().users.find(u => u.id === id)
+    const user = getData().users.find(u => String(u.id) === String(id))
     if (user) {
       user.status = status
       saveData()
@@ -271,7 +531,7 @@ const userModule = {
     return { success: false, message: '旧密码不正确' }
   },
   search: (params) => {
-    let users = getData().users.sort((a, b) => b.id - a.id)
+    let users = getData().users.slice().reverse()
     if (params.username) {
       users = users.filter(u => u.username.includes(params.username))
     }
@@ -290,10 +550,10 @@ const userModule = {
 
 const todoModule = {
   getAll: () => {
-    return getData().todos
+    return [...getData().todos]
   },
   getById: (id) => {
-    return getData().todos.find(t => t.id === id)
+    return getData().todos.find(t => String(t.id) === String(id))
   },
   add: (todo) => {
     const newTodo = {
@@ -306,7 +566,7 @@ const todoModule = {
     return newTodo
   },
   update: (todo) => {
-    const index = getData().todos.findIndex(t => t.id === todo.id)
+    const index = getData().todos.findIndex(t => String(t.id) === String(todo.id))
     if (index !== -1) {
       getData().todos[index] = { ...getData().todos[index], ...todo }
       saveData()
@@ -315,7 +575,7 @@ const todoModule = {
     return null
   },
   delete: (id) => {
-    const index = getData().todos.findIndex(t => t.id === id)
+    const index = getData().todos.findIndex(t => String(t.id) === String(id))
     if (index !== -1) {
       getData().todos.splice(index, 1)
       saveData()
@@ -324,7 +584,7 @@ const todoModule = {
     return false
   },
   updateStatus: (id, status) => {
-    const todo = getData().todos.find(t => t.id === id)
+    const todo = getData().todos.find(t => String(t.id) === String(id))
     if (todo) {
       todo.status = status
       saveData()
@@ -333,7 +593,7 @@ const todoModule = {
     return false
   },
   toggleStatus: (id) => {
-    const todo = getData().todos.find(t => t.id === id)
+    const todo = getData().todos.find(t => String(t.id) === String(id))
     if (todo) {
       todo.status = todo.status === 'completed' ? 'pending' : 'completed'
       saveData()
@@ -352,10 +612,10 @@ const todoModule = {
 
 const diaryModule = {
   getAll: () => {
-    return getData().diaries.sort((a, b) => new Date(b.date) - new Date(a.date))
+    return [...getData().diaries].sort((a, b) => new Date(b.date) - new Date(a.date))
   },
   getById: (id) => {
-    return getData().diaries.find(d => d.id === id)
+    return getData().diaries.find(d => String(d.id) === String(id))
   },
   getByDate: (date) => {
     return getData().diaries.find(d => d.date === date)
@@ -370,7 +630,7 @@ const diaryModule = {
     return newDiary
   },
   update: (diary) => {
-    const index = getData().diaries.findIndex(d => d.id === diary.id)
+    const index = getData().diaries.findIndex(d => String(d.id) === String(diary.id))
     if (index !== -1) {
       getData().diaries[index] = { ...getData().diaries[index], ...diary }
       saveData()
@@ -379,7 +639,7 @@ const diaryModule = {
     return null
   },
   delete: (id) => {
-    const index = getData().diaries.findIndex(d => d.id === id)
+    const index = getData().diaries.findIndex(d => String(d.id) === String(id))
     if (index !== -1) {
       getData().diaries.splice(index, 1)
       saveData()
@@ -394,10 +654,10 @@ const diaryModule = {
 
 const noteModule = {
   getAll: () => {
-    return getData().notes.sort((a, b) => new Date(b.createTime) - new Date(a.createTime))
+    return [...getData().notes].sort((a, b) => new Date(b.createTime) - new Date(a.createTime))
   },
   getById: (id) => {
-    return getData().notes.find(n => n.id === id)
+    return getData().notes.find(n => String(n.id) === String(id))
   },
   add: (note) => {
     const newNote = {
@@ -411,7 +671,7 @@ const noteModule = {
     return newNote
   },
   update: (note) => {
-    const index = getData().notes.findIndex(n => n.id === note.id)
+    const index = getData().notes.findIndex(n => String(n.id) === String(note.id))
     if (index !== -1) {
       getData().notes[index] = {
         ...getData().notes[index],
@@ -424,7 +684,7 @@ const noteModule = {
     return null
   },
   delete: (id) => {
-    const index = getData().notes.findIndex(n => n.id === id)
+    const index = getData().notes.findIndex(n => String(n.id) === String(id))
     if (index !== -1) {
       getData().notes.splice(index, 1)
       saveData()
@@ -436,10 +696,10 @@ const noteModule = {
 
 const bookmarkModule = {
   getAll: () => {
-    return getData().bookmarks.sort((a, b) => b.id - a.id)
+    return getData().bookmarks.slice().reverse()
   },
   getById: (id) => {
-    return getData().bookmarks.find(b => b.id === id)
+    return getData().bookmarks.find(b => String(b.id) === String(id))
   },
   add: (bookmark) => {
     const newBookmark = {
@@ -452,7 +712,7 @@ const bookmarkModule = {
     return newBookmark
   },
   update: (bookmark) => {
-    const index = getData().bookmarks.findIndex(b => b.id === bookmark.id)
+    const index = getData().bookmarks.findIndex(b => String(b.id) === String(bookmark.id))
     if (index !== -1) {
       getData().bookmarks[index] = { ...getData().bookmarks[index], ...bookmark }
       saveData()
@@ -461,22 +721,67 @@ const bookmarkModule = {
     return null
   },
   delete: (id) => {
-    const index = getData().bookmarks.findIndex(b => b.id === id)
+    const index = getData().bookmarks.findIndex(b => String(b.id) === String(id))
     if (index !== -1) {
       getData().bookmarks.splice(index, 1)
       saveData()
       return true
     }
     return false
+  },
+  saveAll: (bookmarks) => {
+    getData().bookmarks = bookmarks
+    saveData()
+  }
+}
+
+const categoryModule = {
+  getAll: () => {
+    return getData().categories.slice().reverse()
+  },
+  getById: (id) => {
+    return getData().categories.find(c => String(c.id) === String(id))
+  },
+  add: (category) => {
+    const newCategory = {
+      ...category,
+      id: generateId(),
+      icon: category.icon || 'layui-icon layui-icon-link'
+    }
+    getData().categories.push(newCategory)
+    saveData()
+    return newCategory
+  },
+  update: (category) => {
+    const index = getData().categories.findIndex(c => String(c.id) === String(category.id))
+    if (index !== -1) {
+      getData().categories[index] = { ...getData().categories[index], ...category }
+      saveData()
+      return getData().categories[index]
+    }
+    return null
+  },
+  delete: (id) => {
+    const index = getData().categories.findIndex(c => String(c.id) === String(id))
+    if (index !== -1) {
+      getData().categories.splice(index, 1)
+      saveData()
+      return true
+    }
+    return false
+  },
+  saveAll: (categories) => {
+    getData().categories = categories
+    saveData()
   }
 }
 
 const goalModule = {
   getAll: () => {
-    return getData().goals.sort((a, b) => new Date(b.deadline) - new Date(a.deadline))
+    return [...getData().goals].sort((a, b) => new Date(b.deadline) - new Date(a.deadline))
   },
   getById: (id) => {
-    return getData().goals.find(g => g.id === id)
+    return getData().goals.find(g => String(g.id) === String(id))
   },
   add: (goal) => {
     const newGoal = {
@@ -490,7 +795,7 @@ const goalModule = {
     return newGoal
   },
   update: (goal) => {
-    const index = getData().goals.findIndex(g => g.id === goal.id)
+    const index = getData().goals.findIndex(g => String(g.id) === String(goal.id))
     if (index !== -1) {
       getData().goals[index] = { ...getData().goals[index], ...goal }
       saveData()
@@ -499,7 +804,7 @@ const goalModule = {
     return null
   },
   delete: (id) => {
-    const index = getData().goals.findIndex(g => g.id === id)
+    const index = getData().goals.findIndex(g => String(g.id) === String(id))
     if (index !== -1) {
       getData().goals.splice(index, 1)
       saveData()
@@ -508,7 +813,7 @@ const goalModule = {
     return false
   },
   updateStatus: (id, status) => {
-    const goal = getData().goals.find(g => g.id === id)
+    const goal = getData().goals.find(g => String(g.id) === String(id))
     if (goal) {
       goal.status = status
       saveData()
@@ -520,10 +825,10 @@ const goalModule = {
 
 const memoModule = {
   getAll: () => {
-    return getData().memos.sort((a, b) => b.id - a.id)
+    return getData().memos.slice().reverse()
   },
   getById: (id) => {
-    return getData().memos.find(m => m.id === id)
+    return getData().memos.find(m => String(m.id) === String(id))
   },
   add: (memo) => {
     const newMemo = {
@@ -536,7 +841,7 @@ const memoModule = {
     return newMemo
   },
   update: (memo) => {
-    const index = getData().memos.findIndex(m => m.id === memo.id)
+    const index = getData().memos.findIndex(m => String(m.id) === String(memo.id))
     if (index !== -1) {
       getData().memos[index] = { ...getData().memos[index], ...memo }
       saveData()
@@ -545,7 +850,7 @@ const memoModule = {
     return null
   },
   delete: (id) => {
-    const index = getData().memos.findIndex(m => m.id === id)
+    const index = getData().memos.findIndex(m => String(m.id) === String(id))
     if (index !== -1) {
       getData().memos.splice(index, 1)
       saveData()
@@ -555,12 +860,130 @@ const memoModule = {
   }
 }
 
-const scheduleModule = {
+const notebookModule = {
   getAll: () => {
-    return getData().schedules.sort((a, b) => new Date(a.startTime) - new Date(b.startTime))
+    return getData().notebooks.slice().reverse()
   },
   getById: (id) => {
-    return getData().schedules.find(s => s.id === id)
+    return getData().notebooks.find(n => String(n.id) === String(id))
+  },
+  add: (notebook) => {
+    const newNotebook = {
+      ...notebook,
+      id: generateId()
+    }
+    getData().notebooks.push(newNotebook)
+    saveData()
+    return newNotebook
+  },
+  update: (notebook) => {
+    const index = getData().notebooks.findIndex(n => String(n.id) === String(notebook.id))
+    if (index !== -1) {
+      getData().notebooks[index] = { ...getData().notebooks[index], ...notebook }
+      saveData()
+      return getData().notebooks[index]
+    }
+    return null
+  },
+  delete: (id) => {
+    const index = getData().notebooks.findIndex(n => String(n.id) === String(id))
+    if (index !== -1) {
+      getData().notebooks.splice(index, 1)
+      saveData()
+      return true
+    }
+    return false
+  }
+}
+
+const sectionModule = {
+  getAll: () => {
+    return getData().sections.slice().reverse()
+  },
+  getById: (id) => {
+    return getData().sections.find(s => String(s.id) === String(id))
+  },
+  getByNotebook: (notebookId) => {
+    return getData().sections.filter(s => String(s.notebookId) === String(notebookId))
+  },
+  add: (section) => {
+    const newSection = {
+      ...section,
+      id: generateId()
+    }
+    getData().sections.push(newSection)
+    saveData()
+    return newSection
+  },
+  update: (section) => {
+    const index = getData().sections.findIndex(s => String(s.id) === String(section.id))
+    if (index !== -1) {
+      getData().sections[index] = { ...getData().sections[index], ...section }
+      saveData()
+      return getData().sections[index]
+    }
+    return null
+  },
+  delete: (id) => {
+    const index = getData().sections.findIndex(s => String(s.id) === String(id))
+    if (index !== -1) {
+      getData().sections.splice(index, 1)
+      saveData()
+      return true
+    }
+    return false
+  }
+}
+
+const habitModule = {
+  getAll: () => {
+    return getData().habits.slice().reverse()
+  },
+  getById: (id) => {
+    return getData().habits.find(h => String(h.id) === String(id))
+  },
+  add: (habit) => {
+    const newHabit = {
+      ...habit,
+      id: generateId(),
+      streak: 0,
+      todayChecked: false,
+      checkedDays: []
+    }
+    getData().habits.push(newHabit)
+    saveData()
+    return newHabit
+  },
+  update: (habit) => {
+    const index = getData().habits.findIndex(h => String(h.id) === String(habit.id))
+    if (index !== -1) {
+      getData().habits[index] = { ...getData().habits[index], ...habit }
+      saveData()
+      return getData().habits[index]
+    }
+    return null
+  },
+  delete: (id) => {
+    const index = getData().habits.findIndex(h => String(h.id) === String(id))
+    if (index !== -1) {
+      getData().habits.splice(index, 1)
+      saveData()
+      return true
+    }
+    return false
+  }
+}
+
+const scheduleModule = {
+  getAll: () => {
+    return [...getData().schedules].sort((a, b) => {
+      const dateA = new Date(`${a.date}T${a.time || '00:00'}`)
+      const dateB = new Date(`${b.date}T${b.time || '00:00'}`)
+      return dateA - dateB
+    })
+  },
+  getById: (id) => {
+    return getData().schedules.find(s => String(s.id) === String(id))
   },
   add: (schedule) => {
     const newSchedule = {
@@ -573,7 +996,7 @@ const scheduleModule = {
     return newSchedule
   },
   update: (schedule) => {
-    const index = getData().schedules.findIndex(s => s.id === schedule.id)
+    const index = getData().schedules.findIndex(s => String(s.id) === String(schedule.id))
     if (index !== -1) {
       getData().schedules[index] = { ...getData().schedules[index], ...schedule }
       saveData()
@@ -582,7 +1005,7 @@ const scheduleModule = {
     return null
   },
   delete: (id) => {
-    const index = getData().schedules.findIndex(s => s.id === id)
+    const index = getData().schedules.findIndex(s => String(s.id) === String(id))
     if (index !== -1) {
       getData().schedules.splice(index, 1)
       saveData()
@@ -618,9 +1041,13 @@ export const dataManager = {
   todos: todoModule,
   diaries: diaryModule,
   notes: noteModule,
+  notebooks: notebookModule,
+  sections: sectionModule,
   bookmarks: bookmarkModule,
+  categories: categoryModule,
   goals: goalModule,
   memos: memoModule,
+  habits: habitModule,
   schedules: scheduleModule,
   sync: syncModule
 }

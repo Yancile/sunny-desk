@@ -241,14 +241,14 @@ const visiblePages = computed(() => {
 
 const fetchUsers = () => {
   let allUsers = dataManager.users.getAll()
-  
+
   if (searchUsername.value) {
     allUsers = allUsers.filter(u => u.username.includes(searchUsername.value))
   }
   if (userTypeFilter.value) {
     allUsers = allUsers.filter(u => u.role === userTypeFilter.value)
   }
-  
+
   total.value = allUsers.length
   const start = (currentPage.value - 1) * pageSize.value
   const end = start + pageSize.value
@@ -355,14 +355,20 @@ const deleteUser = (id) => {
 
 const confirmDelete = () => {
   try {
-    dataManager.users.delete(deleteUserId.value)
-    layer.msg('删除成功', { icon: 6 })
-    if (users.value.length === 1 && currentPage.value > 1) {
-      currentPage.value--
+    const success = dataManager.users.delete(deleteUserId.value)
+    if (success) {
+      users.value = users.value.filter(u => String(u.id) !== String(deleteUserId.value))
+      layer.msg('删除成功', { icon: 6 })
+      if (users.value.length === 0 && currentPage.value > 1) {
+        currentPage.value--
+        fetchUsers()
+      }
+    } else {
+      layer.msg('删除失败', { icon: 5 })
     }
-    fetchUsers()
   } catch (error) {
     console.error('删除失败:', error)
+    layer.msg('删除失败', { icon: 5 })
   }
   showDeleteConfirm.value = false
 }

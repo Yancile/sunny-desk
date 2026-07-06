@@ -32,7 +32,8 @@
     </div>
 
     <div class="memo-grid">
-      <div v-for="memo in filteredMemos" :key="memo.id" class="memo-card" :class="[memo.color, { pinned: memo.pinned }]" @click="editMemo(memo)">
+      <div v-for="memo in filteredMemos" :key="memo.id" class="memo-card" :class="[memo.color, { pinned: memo.pinned }]"
+        @click="editMemo(memo)">
         <div v-if="memo.pinned" class="pin-icon">
           <i class="layui-icon layui-icon-pin"></i>
         </div>
@@ -78,8 +79,9 @@
             <div class="form-group">
               <label>颜色</label>
               <div class="color-picker">
-                <button v-for="color in colors" :key="color.value" class="color-btn" :class="{ active: formData.color === color.value }"
-                  :style="{ background: color.bg }" @click="formData.color = color.value"></button>
+                <button v-for="color in colors" :key="color.value" class="color-btn"
+                  :class="{ active: formData.color === color.value }" :style="{ background: color.bg }"
+                  @click="formData.color = color.value"></button>
               </div>
             </div>
             <div class="form-group">
@@ -102,64 +104,22 @@
 </template>
 
 <script setup>
-import { ref, computed, reactive } from 'vue'
+import { ref, computed, reactive, onMounted } from 'vue'
 import { useAppStore } from '@/stores/modules/app'
 import { layer } from '@layui/layui-vue'
+import { dataManager } from '@/utils/dataManager'
 
 const appStore = useAppStore()
 
-const memos = ref([
-  {
-    id: 1,
-    title: '会议记录',
-    content: '今天下午的项目会议讨论了Q3的工作计划，需要完成以下任务：1. 需求文档编写 2. 技术方案设计 3. 资源协调',
-    color: 'yellow',
-    pinned: true,
-    reminder: '',
-    createdAt: '2026-07-01T14:30',
-    archived: false
-  },
-  {
-    id: 2,
-    title: '购物清单',
-    content: '牛奶、面包、鸡蛋、水果、蔬菜',
-    color: 'green',
-    pinned: false,
-    reminder: '2026-07-02T18:00',
-    createdAt: '2026-07-01T10:00',
-    archived: false
-  },
-  {
-    id: 3,
-    title: '学习笔记',
-    content: 'Vue3 Composition API的核心概念：ref、reactive、computed、watch、生命周期钩子',
-    color: 'blue',
-    pinned: false,
-    reminder: '',
-    createdAt: '2026-06-30T20:00',
-    archived: false
-  },
-  {
-    id: 4,
-    title: '重要提醒',
-    content: '明天上午9点有客户电话会议，准备好演示材料',
-    color: 'pink',
-    pinned: true,
-    reminder: '2026-07-02T08:30',
-    createdAt: '2026-07-01T16:00',
-    archived: false
-  },
-  {
-    id: 5,
-    title: '阅读推荐',
-    content: '《深入理解计算机系统》《代码大全》《设计模式》',
-    color: 'purple',
-    pinned: false,
-    reminder: '',
-    createdAt: '2026-06-29T15:00',
-    archived: true
-  }
-])
+const memos = ref([])
+
+const loadData = () => {
+  memos.value = dataManager.memos.getAll()
+}
+
+onMounted(() => {
+  loadData()
+})
 
 const searchKeyword = ref('')
 const colorFilter = ref('')
@@ -241,31 +201,35 @@ const saveMemo = () => {
     return
   }
   if (editingMemo.value) {
-    const index = memos.value.findIndex(m => m.id === editingMemo.value.id)
-    if (index !== -1) {
-      memos.value[index] = { ...formData, id: editingMemo.value.id, createdAt: editingMemo.value.createdAt, archived: editingMemo.value.archived }
-      layer.msg('修改成功', { icon: 1 })
-    }
-  } else {
-    memos.value.unshift({
+    dataManager.memos.update({
       ...formData,
-      id: Date.now(),
+      id: editingMemo.value.id,
+      createdAt: editingMemo.value.createdAt,
+      archived: editingMemo.value.archived
+    })
+    layer.msg('修改成功', { icon: 1 })
+  } else {
+    dataManager.memos.add({
+      ...formData,
       createdAt: new Date().toISOString(),
       archived: false
     })
     layer.msg('创建成功', { icon: 1 })
   }
+  loadData()
   closeModal()
 }
 
 const deleteMemo = (id) => {
-  layer.confirm('确定删除该备忘录吗？', { icon: 3 }, () => {
-    const index = memos.value.findIndex(m => m.id === id)
-    if (index !== -1) {
-      memos.value.splice(index, 1)
+  if (confirm('确定删除该备忘录吗？')) {
+    const success = dataManager.memos.delete(id)
+    if (success) {
+      memos.value = memos.value.filter(m => String(m.id) !== String(id))
       layer.msg('删除成功', { icon: 1 })
+    } else {
+      layer.msg('删除失败', { icon: 5 })
     }
-  })
+  }
 }
 </script>
 
@@ -447,14 +411,10 @@ const deleteMemo = (id) => {
   border: none;
   color: #94a3b8;
   cursor: pointer;
-  padding: 4px;
+  padding: 6px;
   border-radius: 6px;
-  opacity: 0;
   transition: all 0.2s ease;
-}
-
-.memo-card:hover .delete-btn {
-  opacity: 1;
+  z-index: 10;
 }
 
 .delete-btn:hover {

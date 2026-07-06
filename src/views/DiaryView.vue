@@ -135,7 +135,7 @@
                     <input type="text" v-model="formData.weather" placeholder="如：晴、多云、小雨" class="form-input" />
                     <div class="weather-suggestions">
                       <span v-for="w in weatherOptions" :key="w" class="weather-tag" @click="formData.weather = w">{{ w
-                      }}</span>
+                        }}</span>
                     </div>
                   </div>
                 </div>
@@ -451,12 +451,16 @@ const saveDiary = () => {
 }
 
 const deleteDiary = (id) => {
-  layer.confirm('确定删除该日记吗？', { icon: 3 }, () => {
-    dataManager.diaries.delete(id)
-    loadDiaries()
-    selectedDiary.value = null
-    layer.msg('删除成功', { icon: 1 })
-  })
+  if (confirm('确定删除该日记吗？')) {
+    const success = dataManager.diaries.delete(id)
+    if (success) {
+      diaries.value = diaries.value.filter(d => String(d.id) !== String(id))
+      selectedDiary.value = null
+      layer.msg('删除成功', { icon: 1 })
+    } else {
+      layer.msg('删除失败', { icon: 5 })
+    }
+  }
 }
 
 onMounted(() => {

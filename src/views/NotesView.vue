@@ -30,150 +30,87 @@
     </div>
 
     <div class="content-row">
-      <div class="column-left">
-        <div class="column-header">
-          <span class="column-title">笔记本</span>
-          <span>
-            <button v-if="selectedNotebook" class="add-section-btn"
-              @click="showSectionModal = true; parentSectionId = null">
-              <i class="layui-icon layui-icon-add-1"></i>
-              +
-            </button>
-          </span>
+      <div class="sidebar">
+        <div class="sidebar-header">
+          <span class="sidebar-title">笔记本</span>
+          <button class="add-notebook-btn" @click="showNotebookModal = true; editingNotebook = null">
+            <i class="layui-icon layui-icon-add-1"></i>
+          </button>
         </div>
-        <div class="notebook-list">
-          <div v-for="notebook in notebooks" :key="notebook.id" class="notebook-item"
-            :class="{ active: selectedNotebook?.id === notebook.id }" @click="selectNotebook(notebook)"
-            @contextmenu.prevent="showNotebookContextMenu($event, notebook)">
-            <span class="notebook-icon">{{ notebook.icon }}</span>
-            <span class="notebook-name">{{ notebook.name }}</span>
-          </div>
-        </div>
-      </div>
-
-      <div class="column-middle">
-        <div class="column-header">
-          <span class="column-title">分区</span>
-          <span>
-            <button v-if="selectedNotebook" class="add-section-btn"
-              @click="showSectionModal = true; parentSectionId = null">
-              <i class="layui-icon layui-icon-add-1"></i>
-              +
-            </button>
-          </span>
-        </div>
-        <div class="section-tree" v-if="selectedNotebook">
-          <div v-for="section in rootSections" :key="section.id">
-            <div class="section-node">
-              <div class="section-item" :class="{ active: selectedSection?.id === section.id }"
-                @click="selectSection(section)" @contextmenu.prevent="showSectionContextMenu($event, section)">
-                <button v-if="hasChildren(section.id)" class="expand-btn" @click.stop="toggleSectionExpand(section.id)">
+        <div class="notebook-tree">
+          <div v-for="notebook in notebooks" :key="notebook.id">
+            <div class="notebook-node">
+              <div class="notebook-item"
+                :class="{ active: selectedNotebook?.id === notebook.id, expanded: expandedNotebooks.includes(notebook.id) }"
+                @click="toggleNotebookExpand(notebook.id); selectedNotebook = notebook"
+                @contextmenu.prevent="showNotebookContextMenu($event, notebook)">
+                <button class="expand-btn" @click.stop="toggleNotebookExpand(notebook.id)">
                   <i class="layui-icon"
-                    :class="expandedSections.includes(section.id) ? 'layui-icon-down' : 'layui-icon-right'"></i>
+                    :class="expandedNotebooks.includes(notebook.id) ? 'layui-icon-down' : 'layui-icon-right'"></i>
                 </button>
-                <span v-else class="expand-placeholder"></span>
-                <span class="section-name">{{ section.name }}</span>
-                <button class="section-add-child" @click.stop="showAddSubSection(section)">
+                <span class="notebook-icon">{{ notebook.icon }}</span>
+                <span class="notebook-name">{{ notebook.name }}</span>
+                <button class="notebook-add-section"
+                  @click.stop="selectedNotebook = notebook; showSectionModal = true; parentSectionId = null">
                   <i class="layui-icon layui-icon-add-1"></i>
                 </button>
               </div>
-              <div v-if="expandedSections.includes(section.id)" class="section-children">
-                <div v-for="child in getChildren(section.id)" :key="child.id">
+              <div v-if="expandedNotebooks.includes(notebook.id)" class="notebook-children">
+                <div v-for="section in getSections(notebook.id).filter(s => s.parentId === null)" :key="section.id">
                   <div class="section-node">
-                    <div class="section-item child" :class="{ active: selectedSection?.id === child.id }"
-                      @click="selectSection(child)" @contextmenu.prevent="showSectionContextMenu($event, child)">
-                      <button v-if="hasChildren(child.id)" class="expand-btn"
-                        @click.stop="toggleSectionExpand(child.id)">
+                    <div class="section-item" :class="{ active: selectedSection?.id === section.id }"
+                      @click="selectSection(section)" @contextmenu.prevent="showSectionContextMenu($event, section)">
+                      <button v-if="hasChildren(section.id)" class="expand-btn"
+                        @click.stop="toggleSectionExpand(section.id)">
                         <i class="layui-icon"
-                          :class="expandedSections.includes(child.id) ? 'layui-icon-down' : 'layui-icon-right'"></i>
+                          :class="expandedSections.includes(section.id) ? 'layui-icon-down' : 'layui-icon-right'"></i>
                       </button>
                       <span v-else class="expand-placeholder"></span>
-                      <span class="section-name">{{ child.name }}</span>
-                      <button class="section-add-child" @click.stop="showAddSubSection(child)">
+                      <span class="section-name">{{ section.name }}</span>
+                      <button class="section-add-child" @click.stop="showAddSubSection(section)">
                         <i class="layui-icon layui-icon-add-1"></i>
                       </button>
                     </div>
-                    <div v-if="expandedSections.includes(child.id)" class="section-children">
-                      <div v-for="grandchild in getChildren(child.id)" :key="grandchild.id">
-                        <div class="section-item grandchild" :class="{ active: selectedSection?.id === grandchild.id }"
-                          @click="selectSection(grandchild)"
-                          @contextmenu.prevent="showSectionContextMenu($event, grandchild)">
-                          <span class="expand-placeholder"></span>
-                          <span class="section-name">{{ grandchild.name }}</span>
-                          <button class="section-add-child" @click.stop="showAddSubSection(grandchild)">
-                            <i class="layui-icon layui-icon-add-1"></i>
-                          </button>
+                    <div v-if="expandedSections.includes(section.id)" class="section-children">
+                      <div v-for="child in getChildren(section.id)" :key="child.id">
+                        <div class="section-node">
+                          <div class="section-item child" :class="{ active: selectedSection?.id === child.id }"
+                            @click="selectSection(child)" @contextmenu.prevent="showSectionContextMenu($event, child)">
+                            <button v-if="hasChildren(child.id)" class="expand-btn"
+                              @click.stop="toggleSectionExpand(child.id)">
+                              <i class="layui-icon"
+                                :class="expandedSections.includes(child.id) ? 'layui-icon-down' : 'layui-icon-right'"></i>
+                            </button>
+                            <span v-else class="expand-placeholder"></span>
+                            <span class="section-name">{{ child.name }}</span>
+                            <button class="section-add-child" @click.stop="showAddSubSection(child)">
+                              <i class="layui-icon layui-icon-add-1"></i>
+                            </button>
+                          </div>
+                          <div v-if="expandedSections.includes(child.id)" class="section-children">
+                            <div v-for="grandchild in getChildren(child.id)" :key="grandchild.id">
+                              <div class="section-item grandchild"
+                                :class="{ active: selectedSection?.id === grandchild.id }"
+                                @click="selectSection(grandchild)"
+                                @contextmenu.prevent="showSectionContextMenu($event, grandchild)">
+                                <span class="expand-placeholder"></span>
+                                <span class="section-name">{{ grandchild.name }}</span>
+                                <button class="section-add-child" @click.stop="showAddSubSection(grandchild)">
+                                  <i class="layui-icon layui-icon-add-1"></i>
+                                </button>
+                              </div>
+                            </div>
+                          </div>
                         </div>
                       </div>
                     </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div v-else class="empty-section">
-          <span>请选择笔记本</span>
-        </div>
-      </div>
-
-      <div class="column-right">
-        <div class="column-header">
-          <span class="column-title">笔记列表</span>
-        </div>
-        <div class="search-box" v-if="selectedSection">
-          <i class="layui-icon layui-icon-search"></i>
-          <input type="text" v-model="searchKeyword" placeholder="搜索笔记..." />
-        </div>
-        <div class="note-tree" v-if="selectedSection">
-          <div v-for="note in rootNotes" :key="note.id">
-            <div class="note-node">
-              <div class="note-item" :class="{ active: selectedNote?.id === note.id }" @click="selectNote(note)">
-                <button v-if="hasNoteChildren(note.id)" class="expand-btn" @click.stop="toggleNoteExpand(note.id)">
-                  <i class="layui-icon"
-                    :class="expandedNotes.includes(note.id) ? 'layui-icon-down' : 'layui-icon-right'"></i>
-                </button>
-                <span v-else class="expand-placeholder"></span>
-                <div class="note-info">
-                  <div class="note-title">{{ note.title || '无标题' }}</div>
-                  <div class="note-time">{{ formatDate(note.createdAt) }}</div>
-                </div>
-                <button class="note-add-child" @click.stop="showAddSubNote(note)">
-                  <i class="layui-icon layui-icon-add-1"></i>
-                </button>
-              </div>
-              <div v-if="expandedNotes.includes(note.id)" class="note-children">
-                <div v-for="child in getNoteChildren(note.id)" :key="child.id">
-                  <div class="note-node">
-                    <div class="note-item child" :class="{ active: selectedNote?.id === child.id }"
-                      @click="selectNote(child)">
-                      <button v-if="hasNoteChildren(child.id)" class="expand-btn"
-                        @click.stop="toggleNoteExpand(child.id)">
-                        <i class="layui-icon"
-                          :class="expandedNotes.includes(child.id) ? 'layui-icon-down' : 'layui-icon-right'"></i>
-                      </button>
-                      <span v-else class="expand-placeholder"></span>
-                      <div class="note-info">
-                        <div class="note-title">{{ child.title || '无标题' }}</div>
-                        <div class="note-time">{{ formatDate(child.createdAt) }}</div>
-                      </div>
-                      <button class="note-add-child" @click.stop="showAddSubNote(child)">
-                        <i class="layui-icon layui-icon-add-1"></i>
-                      </button>
-                    </div>
-                    <div v-if="expandedNotes.includes(child.id)" class="note-children">
-                      <div v-for="grandchild in getNoteChildren(child.id)" :key="grandchild.id">
-                        <div class="note-item grandchild" :class="{ active: selectedNote?.id === grandchild.id }"
-                          @click="selectNote(grandchild)">
+                    <div class="section-notes">
+                      <div v-for="note in getNotesForSection(section.id)" :key="note.id">
+                        <div class="note-item" :class="{ active: selectedNote?.id === note.id }"
+                          @click="selectNote(note)" @contextmenu.prevent="showNoteContextMenu($event, note)">
                           <span class="expand-placeholder"></span>
-                          <div class="note-info">
-                            <div class="note-title">{{ grandchild.title || '无标题' }}</div>
-                            <div class="note-time">{{ formatDate(grandchild.createdAt) }}</div>
-                          </div>
-                          <button class="note-add-child" @click.stop="showAddSubNote(grandchild)">
-                            <i class="layui-icon layui-icon-add-1"></i>
-                          </button>
-                          <button class="note-delete" @click.stop="deleteNote(grandchild.id)">
+                          <span class="note-title">{{ note.title || '无标题' }}</span>
+                          <button class="note-delete" @click.stop="deleteNote(note.id)">
                             <i class="layui-icon layui-icon-delete"></i>
                           </button>
                         </div>
@@ -184,226 +121,242 @@
               </div>
             </div>
           </div>
-          <div v-if="rootNotes.length === 0" class="empty-notes">
+        </div>
+      </div>
+
+      <div class="editor-area">
+        <div v-if="selectedNote" class="note-editor">
+          <div class="editor-header">
+            <button class="back-btn" @click="selectedNote = null">
+              <i class="layui-icon layui-icon-left"></i>
+              返回列表
+            </button>
+            <div class="editor-title-wrapper">
+              <input type="text" v-model="selectedNote.title" class="title-input" placeholder="笔记标题" />
+            </div>
+            <div class="editor-actions">
+              <span class="update-time">更新于 {{ formatDateTime(selectedNote.updatedAt || selectedNote.createdAt)
+              }}</span>
+              <button class="save-btn" @click="saveCurrentNote">
+                <i class="layui-icon layui-icon-save"></i> 保存
+              </button>
+              <button class="delete-btn" @click="deleteNote(selectedNote.id)">
+                <i class="layui-icon layui-icon-delete"></i>
+              </button>
+            </div>
+          </div>
+          <div class="editor-body">
+            <textarea v-model="selectedNote.content" class="content-editor"
+              placeholder="开始编写笔记...&#10;&#10;支持 Markdown 语法：&#10;# 标题&#10;**加粗** *斜体*&#10;- 列表"></textarea>
+          </div>
+          <div class="editor-preview">
+            <div class="preview-header">
+              <span class="preview-title">预览</span>
+            </div>
+            <div class="preview-content" v-html="renderMarkdown(selectedNote.content)"></div>
+          </div>
+        </div>
+        <div v-else-if="selectedSection" class="empty-editor">
+          <div class="empty-content">
             <i class="layui-icon layui-icon-file"></i>
-            <span>暂无笔记</span>
+            <span>请选择笔记</span>
+            <button class="create-note-btn"
+              @click="showNoteModal = true; parentNoteId = null; formData.title = ''; formData.content = ''; formData.tags = []; formData.sectionId = selectedSection.id; formData.notebookId = selectedNotebook?.id">
+              <i class="layui-icon layui-icon-add-circle"></i> 新建笔记
+            </button>
           </div>
         </div>
-        <div v-else-if="selectedNotebook" class="empty-right">
-          <span>请选择分区</span>
-          <div class="quick-notebooks">
-            <div v-for="nb in notebooks" :key="nb.id" class="quick-notebook"
-              :class="{ active: selectedNotebook?.id === nb.id }" @click="selectNotebook(nb)">
-              <span>{{ nb.icon }}</span>
-              <span>{{ nb.name }}</span>
-            </div>
+        <div v-else-if="selectedNotebook" class="empty-editor">
+          <div class="empty-content">
+            <span>选择分区查看笔记</span>
           </div>
         </div>
-        <div v-else class="empty-right">
-          <span>请选择笔记本</span>
+        <div v-else class="empty-editor">
+          <div class="empty-content">
+            <i class="layui-icon layui-icon-book"></i>
+            <span>选择笔记本开始写作</span>
+            <button class="create-note-btn" @click="showNotebookModal = true">
+              <i class="layui-icon layui-icon-add-circle"></i> 创建笔记本
+            </button>
+          </div>
         </div>
       </div>
     </div>
+  </div>
 
-    <div class="editor-area" v-if="selectedNote">
-      <div class="editor-header">
-        <button class="back-btn" @click="selectedNote = null">
-          <i class="layui-icon layui-icon-left"></i>
-          返回列表
+  <div v-if="showNoteModal" class="modal-overlay" @click.self="closeNoteModal">
+    <div class="modal-content small">
+      <div class="modal-header">
+        <span class="modal-title">{{ editingNote ? '编辑笔记' : (parentNoteId ? '新建子笔记' : '新建笔记') }}</span>
+        <button class="modal-close" @click="closeNoteModal">
+          <i class="layui-icon layui-icon-close"></i>
         </button>
-        <div class="editor-title-wrapper">
-          <input type="text" v-model="selectedNote.title" class="title-input" placeholder="笔记标题" />
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label>标题</label>
+          <input type="text" v-model="formData.title" placeholder="请输入标题" class="form-input" />
         </div>
-        <div class="editor-actions">
-          <span class="update-time">更新于 {{ formatDateTime(selectedNote.updatedAt || selectedNote.createdAt) }}</span>
-          <button class="save-btn" @click="saveCurrentNote">
-            <i class="layui-icon layui-icon-save"></i> 保存
-          </button>
-          <button class="delete-btn" @click="deleteNote(selectedNote.id)">
-            <i class="layui-icon layui-icon-delete"></i>
-          </button>
+        <div class="form-group" v-if="selectedNotebook && !parentNoteId">
+          <label>所属分区</label>
+          <select v-model="formData.sectionId" class="form-select">
+            <option value="">未分类</option>
+            <option v-for="section in getSections(selectedNotebook.id)" :key="section.id" :value="section.id">{{
+              section.name }}</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>标签</label>
+          <input type="text" v-model="tagInput" placeholder="输入标签，回车添加" class="form-input" @keyup.enter="addTag" />
+          <div v-if="formData.tags && formData.tags.length > 0" class="tag-list">
+            <span v-for="tag in formData.tags" :key="tag" class="tag-item">
+              {{ tag }}
+              <button @click="removeTag(tag)">×</button>
+            </span>
+          </div>
         </div>
       </div>
-      <div class="editor-body">
-        <textarea v-model="selectedNote.content" class="content-editor"
-          placeholder="开始编写笔记...&#10;&#10;支持 Markdown 语法：&#10;# 标题&#10;**加粗** *斜体*&#10;- 列表"></textarea>
-      </div>
-      <div class="editor-preview">
-        <div class="preview-header">
-          <span class="preview-title">预览</span>
-        </div>
-        <div class="preview-content" v-html="renderMarkdown(selectedNote.content)"></div>
+      <div class="modal-footer">
+        <button class="btn-cancel" @click="closeNoteModal">取消</button>
+        <button class="btn-confirm" @click="saveNote">{{ editingNote ? '保存修改' : '创建笔记' }}</button>
       </div>
     </div>
+  </div>
 
-    <div v-if="showNoteModal" class="modal-overlay" @click.self="closeNoteModal">
-      <div class="modal-content small">
-        <div class="modal-header">
-          <span class="modal-title">{{ editingNote ? '编辑笔记' : (parentNoteId ? '新建子笔记' : '新建笔记') }}</span>
-          <button class="modal-close" @click="closeNoteModal">
-            <i class="layui-icon layui-icon-close"></i>
-          </button>
+  <div v-if="showNotebookModal" class="modal-overlay" @click.self="closeNotebookModal">
+    <div class="modal-content small">
+      <div class="modal-header">
+        <span class="modal-title">新建笔记本</span>
+        <button class="modal-close" @click="closeNotebookModal">
+          <i class="layui-icon layui-icon-close"></i>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label>名称</label>
+          <input type="text" v-model="notebookForm.name" placeholder="笔记本名称" class="form-input" />
         </div>
-        <div class="modal-body">
-          <div class="form-group">
-            <label>标题</label>
-            <input type="text" v-model="formData.title" placeholder="请输入标题" class="form-input" />
-          </div>
-          <div class="form-group" v-if="selectedNotebook && !parentNoteId">
-            <label>所属分区</label>
-            <select v-model="formData.sectionId" class="form-select">
-              <option value="">未分类</option>
-              <option v-for="section in getSections(selectedNotebook.id)" :key="section.id" :value="section.id">{{
-                section.name }}</option>
-            </select>
-          </div>
-          <div class="form-group">
-            <label>标签</label>
-            <input type="text" v-model="tagInput" placeholder="输入标签，回车添加" class="form-input" @keyup.enter="addTag" />
-            <div v-if="formData.tags && formData.tags.length > 0" class="tag-list">
-              <span v-for="tag in formData.tags" :key="tag" class="tag-item">
-                {{ tag }}
-                <button @click="removeTag(tag)">×</button>
-              </span>
-            </div>
+        <div class="form-group">
+          <label>图标</label>
+          <div class="emoji-picker">
+            <button v-for="emoji in notebookEmojis" :key="emoji" class="emoji-btn"
+              :class="{ active: notebookForm.icon === emoji }" @click="notebookForm.icon = emoji">
+              {{ emoji }}
+            </button>
           </div>
         </div>
-        <div class="modal-footer">
-          <button class="btn-cancel" @click="closeNoteModal">取消</button>
-          <button class="btn-confirm" @click="saveNote">{{ editingNote ? '保存修改' : '创建笔记' }}</button>
+        <div class="form-group">
+          <label>颜色</label>
+          <div class="color-picker">
+            <button v-for="color in notebookColors" :key="color" class="color-btn"
+              :class="{ active: notebookForm.color === color }" :style="{ background: color }"
+              @click="notebookForm.color = color"></button>
+          </div>
         </div>
       </div>
+      <div class="modal-footer">
+        <button class="btn-cancel" @click="closeNotebookModal">取消</button>
+        <button class="btn-confirm" @click="saveNotebook">创建</button>
+      </div>
     </div>
+  </div>
 
-    <div v-if="showNotebookModal" class="modal-overlay" @click.self="closeNotebookModal">
-      <div class="modal-content small">
-        <div class="modal-header">
-          <span class="modal-title">新建笔记本</span>
-          <button class="modal-close" @click="closeNotebookModal">
-            <i class="layui-icon layui-icon-close"></i>
-          </button>
+  <div v-if="showSectionModal" class="modal-overlay" @click.self="closeSectionModal">
+    <div class="modal-content small">
+      <div class="modal-header">
+        <span class="modal-title">{{ editingSection ? '编辑分区' : (parentSectionId ? '新建子分区' : '新建分区') }}</span>
+        <button class="modal-close" @click="closeSectionModal">
+          <i class="layui-icon layui-icon-close"></i>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label>分区名称</label>
+          <input type="text" v-model="sectionForm.name" placeholder="如：第一章 概述" class="form-input" />
         </div>
-        <div class="modal-body">
-          <div class="form-group">
-            <label>名称</label>
-            <input type="text" v-model="notebookForm.name" placeholder="笔记本名称" class="form-input" />
-          </div>
-          <div class="form-group">
-            <label>图标</label>
-            <div class="emoji-picker">
-              <button v-for="emoji in notebookEmojis" :key="emoji" class="emoji-btn"
-                :class="{ active: notebookForm.icon === emoji }" @click="notebookForm.icon = emoji">
-                {{ emoji }}
-              </button>
-            </div>
-          </div>
-          <div class="form-group">
-            <label>颜色</label>
-            <div class="color-picker">
-              <button v-for="color in notebookColors" :key="color" class="color-btn"
-                :class="{ active: notebookForm.color === color }" :style="{ background: color }"
-                @click="notebookForm.color = color"></button>
-            </div>
-          </div>
-        </div>
-        <div class="modal-footer">
-          <button class="btn-cancel" @click="closeNotebookModal">取消</button>
-          <button class="btn-confirm" @click="saveNotebook">创建</button>
+        <div class="form-group" v-if="parentSectionId">
+          <label>父分区</label>
+          <input type="text" :value="getParentSectionName(parentSectionId)" class="form-input" disabled />
         </div>
       </div>
+      <div class="modal-footer">
+        <button class="btn-cancel" @click="closeSectionModal">取消</button>
+        <button class="btn-confirm" @click="saveSection">{{ editingSection ? '保存修改' : '创建' }}</button>
+      </div>
     </div>
+  </div>
 
-    <div v-if="showSectionModal" class="modal-overlay" @click.self="closeSectionModal">
-      <div class="modal-content small">
-        <div class="modal-header">
-          <span class="modal-title">{{ editingSection ? '编辑分区' : (parentSectionId ? '新建子分区' : '新建分区') }}</span>
-          <button class="modal-close" @click="closeSectionModal">
-            <i class="layui-icon layui-icon-close"></i>
-          </button>
+  <div v-if="showNotebookModal" class="modal-overlay" @click.self="closeNotebookModal">
+    <div class="modal-content small">
+      <div class="modal-header">
+        <span class="modal-title">{{ editingNotebook ? '编辑笔记本' : '新建笔记本' }}</span>
+        <button class="modal-close" @click="closeNotebookModal">
+          <i class="layui-icon layui-icon-close"></i>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label>名称</label>
+          <input type="text" v-model="notebookForm.name" placeholder="笔记本名称" class="form-input" />
         </div>
-        <div class="modal-body">
-          <div class="form-group">
-            <label>分区名称</label>
-            <input type="text" v-model="sectionForm.name" placeholder="如：第一章 概述" class="form-input" />
-          </div>
-          <div class="form-group" v-if="parentSectionId">
-            <label>父分区</label>
-            <input type="text" :value="getParentSectionName(parentSectionId)" class="form-input" disabled />
+        <div class="form-group">
+          <label>图标</label>
+          <div class="emoji-picker">
+            <button v-for="emoji in notebookEmojis" :key="emoji" class="emoji-btn"
+              :class="{ active: notebookForm.icon === emoji }" @click="notebookForm.icon = emoji">
+              {{ emoji }}
+            </button>
           </div>
         </div>
-        <div class="modal-footer">
-          <button class="btn-cancel" @click="closeSectionModal">取消</button>
-          <button class="btn-confirm" @click="saveSection">{{ editingSection ? '保存修改' : '创建' }}</button>
+        <div class="form-group">
+          <label>颜色</label>
+          <div class="color-picker">
+            <button v-for="color in notebookColors" :key="color" class="color-btn"
+              :class="{ active: notebookForm.color === color }" :style="{ background: color }"
+              @click="notebookForm.color = color"></button>
+          </div>
         </div>
       </div>
+      <div class="modal-footer">
+        <button class="btn-cancel" @click="closeNotebookModal">取消</button>
+        <button class="btn-confirm" @click="saveNotebook">{{ editingNotebook ? '保存修改' : '创建' }}</button>
+      </div>
     </div>
+  </div>
 
-    <div v-if="showNotebookModal" class="modal-overlay" @click.self="closeNotebookModal">
-      <div class="modal-content small">
-        <div class="modal-header">
-          <span class="modal-title">{{ editingNotebook ? '编辑笔记本' : '新建笔记本' }}</span>
-          <button class="modal-close" @click="closeNotebookModal">
-            <i class="layui-icon layui-icon-close"></i>
-          </button>
-        </div>
-        <div class="modal-body">
-          <div class="form-group">
-            <label>名称</label>
-            <input type="text" v-model="notebookForm.name" placeholder="笔记本名称" class="form-input" />
-          </div>
-          <div class="form-group">
-            <label>图标</label>
-            <div class="emoji-picker">
-              <button v-for="emoji in notebookEmojis" :key="emoji" class="emoji-btn"
-                :class="{ active: notebookForm.icon === emoji }" @click="notebookForm.icon = emoji">
-                {{ emoji }}
-              </button>
-            </div>
-          </div>
-          <div class="form-group">
-            <label>颜色</label>
-            <div class="color-picker">
-              <button v-for="color in notebookColors" :key="color" class="color-btn"
-                :class="{ active: notebookForm.color === color }" :style="{ background: color }"
-                @click="notebookForm.color = color"></button>
-            </div>
-          </div>
-        </div>
-        <div class="modal-footer">
-          <button class="btn-cancel" @click="closeNotebookModal">取消</button>
-          <button class="btn-confirm" @click="saveNotebook">{{ editingNotebook ? '保存修改' : '创建' }}</button>
-        </div>
-      </div>
+  <div v-if="contextMenu.show" class="context-menu" :style="{ left: contextMenu.x + 'px', top: contextMenu.y + 'px' }"
+    @click.stop>
+    <div class="context-menu-item" @click="handleContextMenuEdit">
+      <i class="layui-icon layui-icon-edit"></i>
+      <span>编辑</span>
     </div>
-
-    <div v-if="contextMenu.show" class="context-menu" :style="{ left: contextMenu.x + 'px', top: contextMenu.y + 'px' }"
-      @click.stop>
-      <div class="context-menu-item" @click="handleContextMenuEdit">
-        <i class="layui-icon layui-icon-edit"></i>
-        <span>编辑</span>
-      </div>
-      <div class="context-menu-item" @click="handleContextMenuDelete">
-        <i class="layui-icon layui-icon-delete"></i>
-        <span>删除</span>
-      </div>
-      <div class="context-menu-divider"></div>
-      <template v-if="contextMenu.type === 'notebook'">
-        <div class="context-menu-item" @click="handleContextMenuAddSection">
-          <i class="layui-icon layui-icon-add-1"></i>
-          <span>新建分区</span>
-        </div>
-      </template>
-      <template v-else>
-        <div class="context-menu-item" @click="handleContextMenuAddSubFolder">
-          <i class="layui-icon layui-icon-add-1"></i>
-          <span>新建子文件夹</span>
-        </div>
-        <div class="context-menu-item" @click="handleContextMenuAddNote">
-          <i class="layui-icon layui-icon-add-circle"></i>
-          <span>新建笔记</span>
-        </div>
-      </template>
+    <div class="context-menu-item" @click="handleContextMenuDelete">
+      <i class="layui-icon layui-icon-delete"></i>
+      <span>删除</span>
     </div>
+    <div class="context-menu-divider"></div>
+    <template v-if="contextMenu.type === 'notebook'">
+      <div class="context-menu-item" @click="handleContextMenuAddSection">
+        <i class="layui-icon layui-icon-add-1"></i>
+        <span>新建分区</span>
+      </div>
+    </template>
+    <template v-else-if="contextMenu.type === 'section'">
+      <div class="context-menu-item" @click="handleContextMenuAddSubFolder">
+        <i class="layui-icon layui-icon-add-1"></i>
+        <span>新建子文件夹</span>
+      </div>
+      <div class="context-menu-item" @click="handleContextMenuAddNote">
+        <i class="layui-icon layui-icon-add-circle"></i>
+        <span>新建笔记</span>
+      </div>
+    </template>
+    <template v-else-if="contextMenu.type === 'note'">
+      <div class="context-menu-item" @click="handleContextMenuAddSubNote">
+        <i class="layui-icon layui-icon-add-circle"></i>
+        <span>新建子笔记</span>
+      </div>
+    </template>
   </div>
 </template>
 
@@ -411,44 +364,23 @@
 import { ref, computed, reactive, watch, onMounted, onUnmounted } from 'vue'
 import { useAppStore } from '@/stores/modules/app'
 import { layer } from '@layui/layui-vue'
+import { dataManager } from '@/utils/dataManager'
 
 const appStore = useAppStore()
 
-const notebooks = ref([
-  { id: 1, name: '数据结构', icon: '📘', color: '#3b82f6' },
-  { id: 2, name: '组成原理', icon: '📗', color: '#10b981' },
-  { id: 3, name: '408', icon: '📕', color: '#ef4444' },
-  { id: 4, name: '英语', icon: '📙', color: '#f59e0b' },
-])
+const notebooks = ref([])
+const sections = ref([])
+const notes = ref([])
 
-const sections = ref([
-  { id: 1, notebookId: 1, parentId: null, name: '第一章' },
-  { id: 2, notebookId: 1, parentId: null, name: '第二章' },
-  { id: 3, notebookId: 1, parentId: null, name: '第三章' },
-  { id: 4, notebookId: 1, parentId: null, name: '第四章' },
-  { id: 5, notebookId: 1, parentId: null, name: '第五章' },
-  { id: 6, notebookId: 1, parentId: null, name: '第六章' },
-  { id: 7, notebookId: 1, parentId: null, name: '第七章' },
-  { id: 8, notebookId: 2, parentId: null, name: '第一章 计算机系统概述' },
-  { id: 9, notebookId: 2, parentId: null, name: '第二章 数据的表示和运算' },
-  { id: 10, notebookId: 2, parentId: null, name: '第三章 存储器层次结构' },
-  { id: 11, notebookId: 1, parentId: 1, name: '1.1 数据结构的基本概念' },
-  { id: 12, notebookId: 1, parentId: 1, name: '1.2 算法和算法分析' },
-  { id: 13, notebookId: 1, parentId: 2, name: '2.1 线性表的定义和特点' },
-  { id: 14, notebookId: 1, parentId: 2, name: '2.2 线性表的顺序表示' },
-  { id: 15, notebookId: 1, parentId: 11, name: '1.1.1 数据' },
-])
+const loadData = () => {
+  notebooks.value = dataManager.notebooks.getAll()
+  sections.value = dataManager.sections.getAll()
+  notes.value = dataManager.notes.getAll()
+}
 
-const notes = ref([
-  { id: 1, title: '第一章概述', notebookId: 1, sectionId: 1, parentId: null, content: '# 第一章概述\n\n## 数据结构的基本概念\n\n数据结构是计算机存储、组织数据的方式。\n\n### 基本术语\n\n- 数据\n- 数据元素\n- 数据项', tags: [], createdAt: '2026-04-22T22:46', updatedAt: '2026-04-22T22:46' },
-  { id: 2, title: '数据的定义', notebookId: 1, sectionId: 1, parentId: 1, content: '# 数据的定义\n\n数据是描述客观事物的符号，是计算机中可以操作的对象。', tags: [], createdAt: '2026-04-22T22:50', updatedAt: '2026-04-22T22:50' },
-  { id: 3, title: '数据元素', notebookId: 1, sectionId: 1, parentId: 1, content: '# 数据元素\n\n数据元素是数据的基本单位，在计算机程序中通常作为一个整体进行考虑和处理。', tags: [], createdAt: '2026-04-22T22:52', updatedAt: '2026-04-22T22:52' },
-  { id: 4, title: '第二章线性表', notebookId: 1, sectionId: 2, parentId: null, content: '# 第二章线性表\n\n## 线性表的定义\n\n线性表是具有相同特性的数据元素的一个有限序列。', tags: [], createdAt: '2026-04-25T14:30', updatedAt: '2026-04-25T14:30' },
-  { id: 5, title: '线性表的顺序存储', notebookId: 1, sectionId: 2, parentId: 4, content: '# 线性表的顺序存储\n\n用一组地址连续的存储单元依次存储线性表的数据元素。', tags: [], createdAt: '2026-04-25T14:40', updatedAt: '2026-04-25T14:40' },
-  { id: 6, title: '第三章栈和队列', notebookId: 1, sectionId: 3, parentId: null, content: '# 第三章栈和队列\n\n## 栈\n\n栈是一种特殊的线性表，只能在一端进行插入和删除操作。', tags: [], createdAt: '2026-04-28T10:15', updatedAt: '2026-04-28T10:15' },
-  { id: 7, title: '计算机系统概述', notebookId: 2, sectionId: 8, parentId: null, content: '# 第一章 计算机系统概述\n\n## 冯·诺依曼结构\n\n冯·诺依曼计算机由五大部件组成。', tags: [], createdAt: '2026-05-01T09:00', updatedAt: '2026-05-01T09:00' },
-  { id: 8, title: '数据的表示和运算', notebookId: 2, sectionId: 9, parentId: null, content: '# 第二章 数据的表示和运算\n\n## 数制转换\n\n二进制、八进制、十进制、十六进制之间的转换方法。', tags: [], createdAt: '2026-05-05T16:20', updatedAt: '2026-05-05T16:20' },
-])
+onMounted(() => {
+  loadData()
+})
 
 const selectedNotebook = ref(null)
 const selectedSection = ref(null)
@@ -467,6 +399,7 @@ const parentNoteId = ref(null)
 
 const expandedSections = ref([1, 2, 8])
 const expandedNotes = ref([1, 4])
+const expandedNotebooks = ref([1, 2])
 
 const editingNotebook = ref(null)
 const editingSection = ref(null)
@@ -475,9 +408,10 @@ const contextMenu = reactive({
   show: false,
   x: 0,
   y: 0,
-  type: 'section',
+  type: 'notebook',
+  notebook: null,
   section: null,
-  notebook: null
+  note: null
 })
 
 const notebookEmojis = ['📘', '📗', '📕', '📙', '📒', '📓', '📔', '📕', '📖', '📚', '📓', '📑', '📁', '📂', '📅', '📆']
@@ -564,6 +498,11 @@ const hasNoteChildren = (parentId) => {
   return getNoteChildren(parentId).length > 0
 }
 
+const getNotesForSection = (sectionId) => {
+  if (!selectedNotebook.value) return []
+  return notes.value.filter(n => n.notebookId === selectedNotebook.value.id && n.sectionId === sectionId && n.parentId === null)
+}
+
 const renderMarkdown = (content) => {
   let html = content
   html = html.replace(/^### (.*$)/gim, '<h3>$1</h3>')
@@ -627,6 +566,15 @@ const toggleSectionExpand = (sectionId) => {
   }
 }
 
+const toggleNotebookExpand = (notebookId) => {
+  const index = expandedNotebooks.value.indexOf(notebookId)
+  if (index === -1) {
+    expandedNotebooks.value.push(notebookId)
+  } else {
+    expandedNotebooks.value.splice(index, 1)
+  }
+}
+
 const toggleNoteExpand = (noteId) => {
   const index = expandedNotes.value.indexOf(noteId)
   if (index === -1) {
@@ -667,6 +615,17 @@ const editSection = (section) => {
   showSectionModal.value = true
 }
 
+const editNote = (note) => {
+  editingNote.value = note
+  formData.title = note.title || ''
+  formData.content = note.content || ''
+  formData.tags = [...(note.tags || [])]
+  formData.sectionId = note.sectionId
+  formData.notebookId = note.notebookId
+  parentNoteId.value = note.parentId
+  showNoteModal.value = true
+}
+
 const showNotebookContextMenu = (event, notebook) => {
   contextMenu.show = true
   contextMenu.x = event.clientX
@@ -684,13 +643,26 @@ const showSectionContextMenu = (event, section) => {
   contextMenu.type = 'section'
   contextMenu.section = section
   contextMenu.notebook = null
+  contextMenu.note = null
   selectedSection.value = section
+}
+
+const showNoteContextMenu = (event, note) => {
+  contextMenu.show = true
+  contextMenu.x = event.clientX
+  contextMenu.y = event.clientY
+  contextMenu.type = 'note'
+  contextMenu.note = note
+  contextMenu.notebook = null
+  contextMenu.section = null
+  selectedNote.value = note
 }
 
 const closeContextMenu = () => {
   contextMenu.show = false
   contextMenu.section = null
   contextMenu.notebook = null
+  contextMenu.note = null
 }
 
 const handleContextMenuEdit = () => {
@@ -698,6 +670,8 @@ const handleContextMenuEdit = () => {
     editNotebook(contextMenu.notebook)
   } else if (contextMenu.type === 'section' && contextMenu.section) {
     editSection(contextMenu.section)
+  } else if (contextMenu.type === 'note' && contextMenu.note) {
+    editNote(contextMenu.note)
   }
   closeContextMenu()
 }
@@ -707,6 +681,8 @@ const handleContextMenuDelete = () => {
     deleteNotebook(contextMenu.notebook.id)
   } else if (contextMenu.type === 'section' && contextMenu.section) {
     deleteSection(contextMenu.section.id)
+  } else if (contextMenu.type === 'note' && contextMenu.note) {
+    deleteNote(contextMenu.note.id)
   }
   closeContextMenu()
 }
@@ -737,6 +713,20 @@ const handleContextMenuAddNote = () => {
     formData.sectionId = contextMenu.section.id
     formData.notebookId = selectedNotebook.value?.id || ''
     parentNoteId.value = null
+    showNoteModal.value = true
+  }
+  closeContextMenu()
+}
+
+const handleContextMenuAddSubNote = () => {
+  if (contextMenu.note) {
+    const parentNote = contextMenu.note
+    formData.title = ''
+    formData.content = ''
+    formData.tags = []
+    formData.sectionId = parentNote.sectionId
+    formData.notebookId = parentNote.notebookId
+    parentNoteId.value = parentNote.id
     showNoteModal.value = true
   }
   closeContextMenu()
@@ -777,41 +767,27 @@ const saveNote = () => {
   const sectionId = formData.sectionId || selectedSection.value?.id || ''
 
   if (editingNote.value) {
-    const index = notes.value.findIndex(n => n.id === editingNote.value.id)
-    if (index !== -1) {
-      notes.value[index] = {
-        ...formData,
-        id: editingNote.value.id,
-        notebookId: notebookId || editingNote.value.notebookId,
-        sectionId: sectionId || editingNote.value.sectionId,
-        createdAt: editingNote.value.createdAt,
-        updatedAt: new Date().toISOString()
-      }
-      selectedNote.value = notes.value[index]
-      layer.msg('修改成功', { icon: 1 })
-    }
+    dataManager.notes.update({
+      ...formData,
+      id: editingNote.value.id,
+      notebookId: notebookId || editingNote.value.notebookId,
+      sectionId: sectionId || editingNote.value.sectionId,
+      createdAt: editingNote.value.createdAt,
+      updatedAt: new Date().toISOString()
+    })
+    layer.msg('修改成功', { icon: 1 })
   } else {
-    const newNote = {
+    dataManager.notes.add({
       ...formData,
       notebookId: notebookId,
       sectionId: sectionId,
-      id: Date.now(),
       parentId: parentNoteId.value,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
-    }
-    notes.value.push(newNote)
-    selectedNote.value = newNote
-
-    if (!selectedNotebook.value && notebookId) {
-      selectedNotebook.value = notebooks.value.find(n => n.id === notebookId) || null
-    }
-    if (!selectedSection.value && sectionId) {
-      selectedSection.value = sections.value.find(s => s.id === sectionId) || null
-    }
-
+    })
     layer.msg('创建成功', { icon: 1 })
   }
+  loadData()
   closeNoteModal()
 }
 
@@ -823,30 +799,35 @@ const saveCurrentNote = () => {
 }
 
 const deleteNote = (id) => {
-  const hasChildren = notes.value.some(n => n.parentId === id)
+  const hasChildren = notes.value.some(n => String(n.parentId) === String(id))
   if (hasChildren) {
-    layer.confirm('该笔记有子笔记，确定删除吗？子笔记将变为顶级笔记。', { icon: 3 }, () => {
+    if (confirm('该笔记有子笔记，确定删除吗？子笔记将变为顶级笔记。')) {
       notes.value.forEach(n => {
-        if (n.parentId === id) {
+        if (String(n.parentId) === String(id)) {
           n.parentId = null
+          dataManager.notes.update(n)
         }
       })
-      const index = notes.value.findIndex(n => n.id === id)
-      if (index !== -1) {
-        notes.value.splice(index, 1)
+      const success = dataManager.notes.delete(id)
+      if (success) {
+        notes.value = notes.value.filter(n => String(n.id) !== String(id))
         selectedNote.value = null
         layer.msg('删除成功', { icon: 1 })
+      } else {
+        layer.msg('删除失败', { icon: 5 })
       }
-    })
+    }
   } else {
-    layer.confirm('确定删除该笔记吗？', { icon: 3 }, () => {
-      const index = notes.value.findIndex(n => n.id === id)
-      if (index !== -1) {
-        notes.value.splice(index, 1)
+    if (confirm('确定删除该笔记吗？')) {
+      const success = dataManager.notes.delete(id)
+      if (success) {
+        notes.value = notes.value.filter(n => String(n.id) !== String(id))
         selectedNote.value = null
         layer.msg('删除成功', { icon: 1 })
+      } else {
+        layer.msg('删除失败', { icon: 5 })
       }
-    })
+    }
   }
 }
 
@@ -864,39 +845,43 @@ const saveNotebook = () => {
     return
   }
   if (editingNotebook.value) {
-    const index = notebooks.value.findIndex(n => n.id === editingNotebook.value.id)
-    if (index !== -1) {
-      notebooks.value[index] = { ...notebooks.value[index], ...notebookForm }
-      selectedNotebook.value = notebooks.value[index]
-      layer.msg('修改成功', { icon: 1 })
-    }
+    dataManager.notebooks.update({ ...editingNotebook.value, ...notebookForm })
+    layer.msg('修改成功', { icon: 1 })
   } else {
-    const newNotebook = {
-      ...notebookForm,
-      id: Date.now()
-    }
-    notebooks.value.push(newNotebook)
-    selectedNotebook.value = newNotebook
+    dataManager.notebooks.add({ ...notebookForm })
     layer.msg('创建成功', { icon: 1 })
   }
+  loadData()
   closeNotebookModal()
 }
 
 const deleteNotebook = (id) => {
-  layer.confirm('确定删除该笔记本吗？所有分区和笔记将被删除。', { icon: 3 }, () => {
-    const index = notebooks.value.findIndex(n => n.id === id)
-    if (index !== -1) {
-      notebooks.value.splice(index, 1)
-      sections.value = sections.value.filter(s => s.notebookId !== id)
-      notes.value = notes.value.filter(n => n.notebookId !== id)
-      if (selectedNotebook.value?.id === id) {
+  if (confirm('确定删除该笔记本吗？所有分区和笔记将被删除。')) {
+    const success = dataManager.notebooks.delete(id)
+    if (success) {
+      notebooks.value = notebooks.value.filter(n => String(n.id) !== String(id))
+      sections.value.forEach(s => {
+        if (String(s.notebookId) === String(id)) {
+          dataManager.sections.delete(s.id)
+        }
+      })
+      sections.value = sections.value.filter(s => String(s.notebookId) !== String(id))
+      notes.value.forEach(n => {
+        if (String(n.notebookId) === String(id)) {
+          dataManager.notes.delete(n.id)
+        }
+      })
+      notes.value = notes.value.filter(n => String(n.notebookId) !== String(id))
+      if (String(selectedNotebook.value?.id) === String(id)) {
         selectedNotebook.value = null
         selectedSection.value = null
         selectedNote.value = null
       }
       layer.msg('删除成功', { icon: 1 })
+    } else {
+      layer.msg('删除失败', { icon: 5 })
     }
-  })
+  }
 }
 
 const closeSectionModal = () => {
@@ -912,65 +897,68 @@ const saveSection = () => {
     return
   }
   if (editingSection.value) {
-    const index = sections.value.findIndex(s => s.id === editingSection.value.id)
-    if (index !== -1) {
-      sections.value[index] = { ...sections.value[index], name: sectionForm.name }
-      selectedSection.value = sections.value[index]
-      layer.msg('修改成功', { icon: 1 })
-    }
+    dataManager.sections.update({ ...editingSection.value, name: sectionForm.name })
+    layer.msg('修改成功', { icon: 1 })
   } else {
-    sections.value.push({
-      ...sectionForm,
-      id: Date.now(),
+    dataManager.sections.add({
+      name: sectionForm.name,
       notebookId: selectedNotebook.value.id,
       parentId: parentSectionId.value
     })
     layer.msg('创建成功', { icon: 1 })
   }
+  loadData()
   closeSectionModal()
 }
 
 const deleteSection = (id) => {
-  const hasChildren = sections.value.some(s => s.parentId === id)
+  const hasChildren = sections.value.some(s => String(s.parentId) === String(id))
   if (hasChildren) {
-    layer.confirm('该分区有子分区，确定删除吗？子分区将变为顶级分区。', { icon: 3 }, () => {
+    if (confirm('该分区有子分区，确定删除吗？子分区将变为顶级分区。')) {
       sections.value.forEach(s => {
-        if (s.parentId === id) {
+        if (String(s.parentId) === String(id)) {
           s.parentId = null
+          dataManager.sections.update(s)
         }
       })
-      const index = sections.value.findIndex(s => s.id === id)
-      if (index !== -1) {
-        sections.value.splice(index, 1)
+      const success = dataManager.sections.delete(id)
+      if (success) {
+        sections.value = sections.value.filter(s => String(s.id) !== String(id))
         notes.value.forEach(n => {
-          if (n.sectionId === id) {
+          if (String(n.sectionId) === String(id)) {
             n.sectionId = null
+            dataManager.notes.update(n)
           }
         })
-        if (selectedSection.value?.id === id) {
+        if (String(selectedSection.value?.id) === String(id)) {
           selectedSection.value = null
           selectedNote.value = null
         }
         layer.msg('删除成功', { icon: 1 })
+      } else {
+        layer.msg('删除失败', { icon: 5 })
       }
-    })
+    }
   } else {
-    layer.confirm('确定删除该分区吗？所有笔记将被移到未分类。', { icon: 3 }, () => {
-      const index = sections.value.findIndex(s => s.id === id)
-      if (index !== -1) {
-        sections.value.splice(index, 1)
+    if (confirm('确定删除该分区吗？所有笔记将被移到未分类。')) {
+      const success = dataManager.sections.delete(id)
+      if (success) {
+        sections.value = sections.value.filter(s => String(s.id) !== String(id))
         notes.value.forEach(n => {
-          if (n.sectionId === id) {
+          if (String(n.sectionId) === String(id)) {
             n.sectionId = null
+            dataManager.notes.update(n)
           }
         })
-        if (selectedSection.value?.id === id) {
+        if (String(selectedSection.value?.id) === String(id)) {
           selectedSection.value = null
           selectedNote.value = null
         }
         layer.msg('删除成功', { icon: 1 })
+      } else {
+        layer.msg('删除失败', { icon: 5 })
       }
-    })
+    }
   }
 }
 
@@ -1062,9 +1050,8 @@ onUnmounted(() => {
   overflow: hidden;
 }
 
-.column-left,
-.column-middle,
-.column-right {
+.sidebar {
+  width: 280px;
   background: #fff;
   border-radius: 12px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
@@ -1073,16 +1060,115 @@ onUnmounted(() => {
   overflow: hidden;
 }
 
-.column-left {
-  width: 180px;
-}
-
-.column-middle {
-  width: 200px;
-}
-
-.column-right {
+.editor-area {
   flex: 1;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.sidebar-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 14px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.sidebar-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #64748b;
+}
+
+.add-notebook-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px;
+  background: #f8fafc;
+  border: none;
+  border-radius: 6px;
+  color: #64748b;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.add-notebook-btn:hover {
+  background: #f1f5f9;
+  color: var(--primary-color, #1e4d7b);
+}
+
+.notebook-tree {
+  flex: 1;
+  overflow-y: auto;
+  padding: 4px;
+}
+
+.notebook-node {
+  margin-bottom: 2px;
+}
+
+.notebook-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.notebook-item:hover {
+  background: #f8fafc;
+}
+
+.notebook-item.active {
+  background: color-mix(in srgb, var(--primary-color, #1e4d7b) 10%, transparent);
+}
+
+.notebook-icon {
+  font-size: 18px;
+}
+
+.notebook-name {
+  flex: 1;
+  font-size: 14px;
+  font-weight: 500;
+  color: #334155;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.notebook-add-section {
+  background: none;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+  padding: 2px;
+  font-size: 14px;
+  opacity: 0;
+  transition: all 0.2s ease;
+}
+
+.notebook-item:hover .notebook-add-section {
+  opacity: 1;
+}
+
+.notebook-add-section:hover {
+  color: var(--primary-color, #1e4d7b);
+}
+
+.notebook-children {
+  padding-left: 12px;
+}
+
+.section-notes {
+  padding-left: 20px;
 }
 
 .column-header {
@@ -1245,7 +1331,8 @@ onUnmounted(() => {
 
 .empty-section,
 .empty-notes,
-.empty-right {
+.empty-right,
+.empty-editor {
   flex: 1;
   display: flex;
   flex-direction: column;
@@ -1254,6 +1341,42 @@ onUnmounted(() => {
   padding: 20px;
   color: #94a3b8;
   font-size: 13px;
+}
+
+.empty-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.empty-content i {
+  font-size: 48px;
+  color: #cbd5e1;
+}
+
+.empty-content span {
+  font-size: 15px;
+  color: #94a3b8;
+}
+
+.create-note-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 20px;
+  background: var(--primary-color, #1e4d7b);
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  color: #fff;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  margin-top: 8px;
+}
+
+.create-note-btn:hover {
+  opacity: 0.9;
 }
 
 .empty-notes i {
@@ -1362,14 +1485,11 @@ onUnmounted(() => {
   color: var(--primary-color, #1e4d7b);
 }
 
-.editor-area {
-  margin-top: 12px;
-  background: #fff;
-  border-radius: 12px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
-  padding: 20px;
+.note-editor {
+  flex: 1;
   display: flex;
   flex-direction: column;
+  padding: 20px;
 }
 
 .editor-header {

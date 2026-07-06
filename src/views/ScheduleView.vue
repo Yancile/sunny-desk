@@ -71,7 +71,7 @@
           </div>
         </div>
 
-        <div class="calendar-grid">
+        <div class="calendar-grid" :key="forceUpdate">
           <div v-for="(week, weekIndex) in calendarWeeks" :key="weekIndex" class="calendar-week">
             <div v-for="(day, dayIndex) in week" :key="dayIndex" class="calendar-day" :class="{
               'other-month': !day.currentMonth,
@@ -83,9 +83,13 @@
               <span class="day-number">{{ day.date.getDate() }}</span>
               <div v-if="day.isToday" class="today-badge"></div>
               <div v-if="day.events && day.events.length > 0" class="day-events">
-                <div v-for="(event, idx) in day.events.slice(0, 3)" :key="idx" class="event-item" :title="event.title">
+                <div v-for="(event, idx) in day.events.slice(0, 3)" :key="idx" class="event-item"
+                  :title="`${event.title}\n${event.time || '全天'}\n${event.location || ''}\n${event.description || ''}`">
                   <span class="event-dot" :style="{ background: event.color }"></span>
-                  <span class="event-name">{{ truncateTitle(event.title, 6) }}</span>
+                  <div class="event-info">
+                    <span class="event-name">{{ truncateTitle(event.title, 6) }}</span>
+                    <span class="event-time">{{ event.time || '全天' }}</span>
+                  </div>
                 </div>
                 <div v-if="day.events.length > 3" class="more-events">+{{ day.events.length - 3 }}</div>
               </div>
@@ -115,7 +119,7 @@
           </button>
         </div>
 
-        <div class="events-list">
+        <div class="events-list" :key="forceUpdate">
           <div v-for="event in dayEvents" :key="event.id" class="event-card" :style="{ borderTopColor: event.color }">
             <div class="event-header">
               <div class="event-time-badge" :style="{ background: event.color }">
@@ -240,9 +244,10 @@
 </template>
 
 <script setup>
-import { ref, computed, reactive } from 'vue'
+import { ref, computed, reactive, onMounted, watch } from 'vue'
 import { useAppStore } from '@/stores/modules/app'
 import { layer } from '@layui/layui-vue'
+import { dataManager } from '@/utils/dataManager'
 
 const appStore = useAppStore()
 
@@ -250,14 +255,26 @@ const viewMode = ref('month')
 const currentDate = ref(new Date())
 const selectedDate = ref(new Date())
 
-const events = ref([
-  { id: 1, title: '产品需求评审', date: '2026-07-01', time: '09:30', location: '会议室A', description: '讨论Q3产品需求', color: '#1e4d7b', repeat: 'none', completed: false },
-  { id: 2, title: '客户电话会议', date: '2026-07-01', time: '14:00', location: '线上', description: '与客户沟通项目进展', color: '#0d9488', repeat: 'none', completed: false },
-  { id: 3, title: '团队周会', date: '2026-07-02', time: '10:00', location: '会议室B', color: '#8b5cf6', repeat: 'weekly', completed: false },
-  { id: 4, title: '代码审查', date: '2026-07-03', time: '15:00', location: '线上', description: '审查团队成员提交的代码', color: '#f59e0b', repeat: 'none', completed: false },
-  { id: 5, title: '健身', date: '2026-07-04', time: '18:00', location: '健身房', color: '#ef4444', repeat: 'daily', completed: false },
-  { id: 6, title: '学习Vue3', date: '2026-07-05', time: '20:00', location: '家里', description: '学习组合式API', color: '#10b981', repeat: 'none', completed: false },
-])
+const events = ref([])
+const forceUpdate = ref(0)
+const refreshKey = ref(0)
+
+watch(
+  () => events.value.length,
+  () => {
+    forceUpdate.value++
+  },
+  { deep: true }
+)
+
+const loadEvents = () => {
+  events.value = dataManager.schedules.getAll()
+  refreshKey.value++
+}
+
+onMounted(() => {
+  loadEvents()
+})
 
 const showEventModal = ref(false)
 const editingEvent = ref(null)
@@ -491,30 +508,33 @@ const saveEvent = () => {
     return
   }
   if (editingEvent.value) {
-    const index = events.value.findIndex(e => e.id === editingEvent.value.id)
-    if (index !== -1) {
-      events.value[index] = { ...formData, id: editingEvent.value.id, completed: editingEvent.value.completed }
-      layer.msg('修改成功', { icon: 1 })
-    }
-  } else {
-    events.value.push({
+    dataManager.schedules.update({
       ...formData,
-      id: Date.now(),
+      id: editingEvent.value.id,
+      completed: editingEvent.value.completed
+    })
+    layer.msg('修改成功', { icon: 1 })
+  } else {
+    dataManager.schedules.add({
+      ...formData,
       completed: false
     })
     layer.msg('添加成功', { icon: 1 })
   }
+  loadEvents()
   closeEventModal()
 }
 
 const deleteEvent = (id) => {
-  layer.confirm('确定删除该事件吗？', { icon: 3 }, () => {
-    const index = events.value.findIndex(e => e.id === id)
-    if (index !== -1) {
-      events.value.splice(index, 1)
+  if (confirm('确定删除该事件吗？')) {
+    const success = dataManager.schedules.delete(id)
+    if (success) {
+      events.value = events.value.filter(e => String(e.id) !== String(id))
       layer.msg('删除成功', { icon: 1 })
+    } else {
+      layer.msg('删除失败', { icon: 5 })
     }
-  })
+  }
 }
 </script>
 
@@ -797,13 +817,14 @@ const deleteEvent = (id) => {
 
 .event-item {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 5px;
-  padding: 3px 6px;
+  padding: 4px 6px;
   border-radius: 6px;
   background: rgba(255, 255, 255, 0.6);
   cursor: pointer;
   transition: all 0.2s ease;
+  border-left: 2px solid transparent;
 }
 
 .event-item:hover {
@@ -823,19 +844,38 @@ const deleteEvent = (id) => {
   height: 6px;
   border-radius: 50%;
   flex-shrink: 0;
+  margin-top: 3px;
+}
+
+.event-info {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  flex: 1;
+  min-width: 0;
 }
 
 .event-name {
   font-size: 11px;
+  font-weight: 500;
   color: #475569;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  flex: 1;
+}
+
+.event-time {
+  font-size: 9px;
+  color: #94a3b8;
+  white-space: nowrap;
 }
 
 .calendar-day.selected .event-name {
   color: rgba(255, 255, 255, 0.9);
+}
+
+.calendar-day.selected .event-time {
+  color: rgba(255, 255, 255, 0.6);
 }
 
 .more-events {
@@ -1177,7 +1217,12 @@ const deleteEvent = (id) => {
 .modal-content {
   background: #fff;
   border-radius: 20px;
-  width: 520px;
+  width: 90%;
+  max-width: 560px;
+  max-height: 90vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
 }
 
@@ -1210,6 +1255,8 @@ const deleteEvent = (id) => {
 
 .modal-body {
   padding: 24px;
+  flex: 1;
+  overflow-y: auto;
 }
 
 .form-group {
