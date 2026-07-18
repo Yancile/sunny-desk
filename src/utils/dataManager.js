@@ -359,6 +359,24 @@ const userModule = {
     updateUsers(users)
     return newUser
   },
+  register: (username, password) => {
+    const existingUser = getUsers().find(u => u.username === username)
+    if (existingUser) {
+      return { success: false, message: '用户名已存在' }
+    }
+    const newUser = {
+      id: generateId(),
+      username,
+      password: bcrypt.hashSync(password, 10),
+      role: 'user',
+      status: 1,
+      createTime: new Date().toLocaleString('zh-CN')
+    }
+    const users = getUsers()
+    users.push(newUser)
+    updateUsers(users)
+    return { success: true, message: '注册成功' }
+  },
   update: (user) => {
     const users = getUsers()
     const index = users.findIndex(u => String(u.id) === String(user.id))
