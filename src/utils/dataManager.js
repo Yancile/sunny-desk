@@ -1,4 +1,5 @@
 import { reactive } from 'vue'
+import bcrypt from 'bcryptjs'
 
 const STORAGE_KEY_PREFIX = 'self_manage_system_data'
 const USERS_STORAGE_KEY = 'self_manage_system_users'
@@ -373,7 +374,6 @@ const userModule = {
     updateUsers(users)
   },
   validateLogin: (username, password) => {
-    const bcrypt = require('bcryptjs')
     const user = getUsers().find(u => u.username === username && u.status === 1)
     if (user && bcrypt.compareSync(password, user.password)) {
       return user
@@ -381,7 +381,6 @@ const userModule = {
     return null
   },
   changePassword: (userId, oldPassword, newPassword) => {
-    const bcrypt = require('bcryptjs')
     const users = getUsers()
     const user = users.find(u => String(u.id) === String(userId))
     if (user) {
