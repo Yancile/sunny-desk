@@ -9,6 +9,7 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url)),
+      'bcryptjs': fileURLToPath(new URL('./node_modules/bcryptjs/umd/index.js', import.meta.url)),
     },
   },
   server: {
