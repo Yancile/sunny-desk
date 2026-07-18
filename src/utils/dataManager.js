@@ -295,10 +295,14 @@ const defaultData = {
     { id: 2, name: '英语', icon: '📚', color: '#e69cf2ff', count: 0 },
     { id: 3, name: '数据结构', icon: '⚛️', color: '#f59e0b', count: 0 },
     { id: 4, name: '组成原理', icon: '🧪', color: '#2695dfff', count: 0 },
-    { id: 5, name: '操作系统', icon: '📖', color: '#e14545ff', count: 0 },
-    { id: 6, name: '计算机网络', icon: '📖', color: '#44ef7dff', count: 0 }
+    { id: 5, name: '操作系统', icon: '📖', color: '#10b981', count: 0 },
+    { id: 6, name: '计算机网络', icon: '🌐', color: '#ec4899', count: 0 }
   ],
-  errorbookTags: []
+  errorbookTags: [],
+  errorbookConfig: {
+    sourceTypes: ['书本', '试卷', '作业', '课堂笔记', '练习册', '其他'],
+    stickingTypes: ['概念不清', '方法不当', '计算错误', '审题偏差', '其他']
+  }
 }
 
 let appData = null
@@ -325,7 +329,7 @@ const validateData = () => {
   const defaults = defaultData
   let needsSave = false
   Object.keys(defaults).forEach(key => {
-    if (appData[key] === undefined) {
+    if (appData[key] === undefined || appData[key] === null || (Array.isArray(appData[key]) && appData[key].length === 0)) {
       appData[key] = JSON.parse(JSON.stringify(defaults[key]))
       needsSave = true
     }
@@ -1346,6 +1350,90 @@ const errorbookTagModule = {
   }
 }
 
+const errorbookConfigModule = {
+  getConfig: () => {
+    return getData().errorbookConfig
+  },
+  getSourceTypes: () => {
+    return [...getData().errorbookConfig.sourceTypes]
+  },
+  addSourceType: (type) => {
+    const types = getData().errorbookConfig.sourceTypes
+    if (!types.includes(type)) {
+      types.push(type)
+      saveData()
+      return true
+    }
+    return false
+  },
+  removeSourceType: (type) => {
+    const types = getData().errorbookConfig.sourceTypes
+    const index = types.indexOf(type)
+    if (index !== -1) {
+      types.splice(index, 1)
+      saveData()
+      return true
+    }
+    return false
+  },
+  updateSourceType: (oldType, newType) => {
+    const types = getData().errorbookConfig.sourceTypes
+    const index = types.indexOf(oldType)
+    if (index !== -1 && !types.includes(newType)) {
+      types[index] = newType
+      getData().errorbook.forEach(e => {
+        if (e.sourceType) {
+          if (Array.isArray(e.sourceType)) {
+            e.sourceType = e.sourceType.map(t => t === oldType ? newType : t)
+          } else if (e.sourceType === oldType) {
+            e.sourceType = newType
+          }
+        }
+      })
+      saveData()
+      return true
+    }
+    return false
+  },
+  getStickingTypes: () => {
+    return [...getData().errorbookConfig.stickingTypes]
+  },
+  addStickingType: (type) => {
+    const types = getData().errorbookConfig.stickingTypes
+    if (!types.includes(type)) {
+      types.push(type)
+      saveData()
+      return true
+    }
+    return false
+  },
+  removeStickingType: (type) => {
+    const types = getData().errorbookConfig.stickingTypes
+    const index = types.indexOf(type)
+    if (index !== -1) {
+      types.splice(index, 1)
+      saveData()
+      return true
+    }
+    return false
+  },
+  updateStickingType: (oldType, newType) => {
+    const types = getData().errorbookConfig.stickingTypes
+    const index = types.indexOf(oldType)
+    if (index !== -1 && !types.includes(newType)) {
+      types[index] = newType
+      getData().errorbook.forEach(e => {
+        if (e.stickingType === oldType) {
+          e.stickingType = newType
+        }
+      })
+      saveData()
+      return true
+    }
+    return false
+  }
+}
+
 loadData()
 
 export const dataManager = {
@@ -1370,5 +1458,6 @@ export const dataManager = {
   sync: syncModule,
   errorbook: errorbookModule,
   subjectBooks: subjectBookModule,
-  errorbookTags: errorbookTagModule
+  errorbookTags: errorbookTagModule,
+  errorbookConfig: errorbookConfigModule
 }

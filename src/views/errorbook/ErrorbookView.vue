@@ -1,137 +1,119 @@
 <template>
   <div class="errorbook-page">
-    <div class="page-header">
+    <div class="header-bar">
       <div class="header-left">
         <h1 class="page-title">错题本</h1>
-        <p class="page-desc">记录和复习各科错题，提升学习效率</p>
+        <p class="page-desc">记录和复习各科错题</p>
       </div>
-      <button class="add-btn" @click="showAddModal = true">
-        <i class="layui-icon layui-icon-add-circle"></i>
-        添加错题
-      </button>
+      <div class="header-stats">
+        <div class="mini-stat">
+          <span class="mini-stat-icon total-icon">📝</span>
+          <span class="mini-stat-value">{{ stats.total }}</span>
+        </div>
+        <div class="mini-stat">
+          <span class="mini-stat-icon pending-icon">⏳</span>
+          <span class="mini-stat-value">{{ stats.pending }}</span>
+        </div>
+        <div class="mini-stat">
+          <span class="mini-stat-icon mastered-icon">✅</span>
+          <span class="mini-stat-value">{{ stats.mastered }}</span>
+        </div>
+        <div class="mini-stat">
+          <span class="mini-stat-icon retry-icon">🔄</span>
+          <span class="mini-stat-value">{{ stats.retry }}</span>
+        </div>
+      </div>
     </div>
 
-    <div class="stats-row">
-      <div class="stat-card">
-        <div class="stat-icon total-icon">
-          <i class="layui-icon layui-icon-note"></i>
+    <div class="filter-bar">
+      <div class="filter-group">
+        <label class="filter-label">科目</label>
+        <div class="select-wrapper">
+          <select v-model="selectedSubject" class="filter-select">
+            <option :value="null">全部</option>
+            <option v-for="subject in subjectBooks" :key="subject.id" :value="subject.name">
+              {{ subject.icon }} {{ subject.name }}
+            </option>
+          </select>
+          <i class="layui-icon layui-icon-down filter-select-icon"></i>
         </div>
-        <div class="stat-info">
-          <div class="stat-value">{{ stats.total }}</div>
-          <div class="stat-label">总错题数</div>
+        <button class="add-subject-btn" @click="showAddSubjectModal = true" title="添加学科">
+          <i class="layui-icon layui-icon-addition"></i>
+        </button>
+      </div>
+
+      <div class="filter-group">
+        <label class="filter-label">状态</label>
+        <div class="select-wrapper">
+          <select v-model="filterForm.status" class="filter-select">
+            <option value="">全部</option>
+            <option v-for="status in statusOptions" :key="status.value" :value="status.value">
+              {{ status.label }}
+            </option>
+          </select>
+          <i class="layui-icon layui-icon-down filter-select-icon"></i>
         </div>
       </div>
-      <div class="stat-card">
-        <div class="stat-icon pending-icon">
-          <i class="layui-icon layui-icon-clock"></i>
-        </div>
-        <div class="stat-info">
-          <div class="stat-value">{{ stats.pending }}</div>
-          <div class="stat-label">待复习</div>
-        </div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-icon mastered-icon">
-          <i class="layui-icon layui-icon-check-circle"></i>
-        </div>
-        <div class="stat-info">
-          <div class="stat-value">{{ stats.mastered }}</div>
-          <div class="stat-label">已掌握</div>
+
+      <div class="filter-group">
+        <label class="filter-label">卡点类型</label>
+        <div class="select-wrapper">
+          <select v-model="filterForm.stickingType" class="filter-select">
+            <option value="">全部</option>
+            <option v-for="type in stickingTypes" :key="type" :value="type">
+              {{ type }}
+            </option>
+          </select>
+          <i class="layui-icon layui-icon-down filter-select-icon"></i>
         </div>
       </div>
-      <div class="stat-card">
-        <div class="stat-icon retry-icon">
-          <i class="layui-icon layui-icon-refresh"></i>
+
+      <div class="filter-group">
+        <label class="filter-label">来源类型</label>
+        <div class="select-wrapper">
+          <select v-model="filterForm.sourceType" class="filter-select">
+            <option value="">全部</option>
+            <option v-for="source in allSourceTypes" :key="source" :value="source">
+              {{ source }}
+            </option>
+          </select>
+          <i class="layui-icon layui-icon-down filter-select-icon"></i>
         </div>
-        <div class="stat-info">
-          <div class="stat-value">{{ stats.retry }}</div>
-          <div class="stat-label">需重做</div>
-        </div>
+      </div>
+
+      <div class="filter-group search-group">
+        <input type="text" v-model="filterForm.searchSource" placeholder="搜索来源名称..." class="search-input" />
+        <i class="layui-icon layui-icon-search search-icon"></i>
+      </div>
+
+      <div class="filter-group review-group">
+        <button class="review-btn" @click="startReview('all')">
+          <i class="layui-icon layui-icon-play"></i>
+          复习全部
+        </button>
+        <button class="review-btn" @click="startReview('pending')" v-if="stats.pending > 0">
+          <i class="layui-icon layui-icon-play"></i>
+          待复习
+        </button>
+        <button class="review-btn" @click="startReview('retry')" v-if="stats.retry > 0">
+          <i class="layui-icon layui-icon-play"></i>
+          需重做
+        </button>
+      </div>
+
+      <div class="filter-group action-group">
+        <button class="add-btn filter-add-btn" @click="showAddModal = true">
+          <i class="layui-icon layui-icon-add-circle"></i>
+          添加错题
+        </button>
+
+        <button class="manage-btn" @click="showManageModal = true" title="管理类型">
+          <i class="layui-icon layui-icon-set"></i>
+        </button>
       </div>
     </div>
 
     <div class="main-content">
-      <div class="subject-panel">
-        <div class="panel-header">
-          <span class="panel-title">学科错题本</span>
-          <button class="add-subject-btn" @click="showAddSubjectModal = true">
-            <i class="layui-icon layui-icon-addition"></i>
-          </button>
-        </div>
-        <div class="subject-list">
-          <div class="subject-item" :class="{ active: selectedSubject === null }" @click="selectSubject(null)"
-            @contextmenu.prevent="showSubjectMenu($event, null)">
-            <span class="subject-icon">📚</span>
-            <span class="subject-name">全部</span>
-            <span class="subject-count">{{ stats.total }}</span>
-          </div>
-          <div v-for="subject in subjectBooks" :key="subject.id" class="subject-item"
-            :class="{ active: selectedSubject === subject.name }" @click="selectSubject(subject.name)"
-            @contextmenu.prevent="showSubjectMenu($event, subject)">
-            <span class="subject-icon">{{ subject.icon }}</span>
-            <span class="subject-name">{{ subject.name }}</span>
-            <span class="subject-count">{{ subject.count }}</span>
-          </div>
-        </div>
-      </div>
-
-      <div class="filter-panel">
-        <div class="filter-section">
-          <h3 class="filter-title">状态筛选</h3>
-          <div class="filter-options">
-            <button v-for="status in statusOptions" :key="status.value" class="filter-btn status-btn"
-              :class="{ active: filterForm.status === status.value }"
-              :style="filterForm.status === status.value ? { background: status.color, color: '#fff' } : {}"
-              @click="filterForm.status = filterForm.status === status.value ? '' : status.value">
-              {{ status.label }}
-            </button>
-          </div>
-        </div>
-
-        <div class="filter-section">
-          <h3 class="filter-title">卡点类型</h3>
-          <div class="filter-options">
-            <button v-for="type in stickingTypes" :key="type" class="filter-btn"
-              :class="{ active: filterForm.stickingType === type }"
-              @click="filterForm.stickingType = filterForm.stickingType === type ? '' : type">
-              {{ type }}
-            </button>
-          </div>
-        </div>
-
-        <div class="filter-section">
-          <h3 class="filter-title">来源筛选</h3>
-          <div class="filter-options">
-            <button v-for="source in allSourceTypes" :key="source" class="filter-btn tag-btn"
-              :class="{ active: filterForm.sourceType === source }"
-              @click="filterForm.sourceType = filterForm.sourceType === source ? '' : source">
-              {{ source }}
-            </button>
-          </div>
-        </div>
-
-        <div class="filter-section">
-          <h3 class="filter-title">搜索来源</h3>
-          <input type="text" v-model="filterForm.searchSource" placeholder="输入来源名称" class="search-input" />
-        </div>
-
-        <div class="review-section">
-          <h3 class="filter-title">快速复习</h3>
-          <button class="review-btn" @click="startReview('all')">
-            <i class="layui-icon layui-icon-play"></i>
-            复习全部
-          </button>
-          <button class="review-btn" @click="startReview('pending')" v-if="stats.pending > 0">
-            <i class="layui-icon layui-icon-play"></i>
-            复习待复习
-          </button>
-          <button class="review-btn" @click="startReview('retry')" v-if="stats.retry > 0">
-            <i class="layui-icon layui-icon-play"></i>
-            复习需重做
-          </button>
-        </div>
-      </div>
-
       <div class="list-panel">
         <div class="list-header">
           <span class="list-title">{{ selectedSubject || '全部' }}错题</span>
@@ -267,10 +249,48 @@
       </div>
     </div>
 
+    <div v-if="showSubjectManageModal" class="modal-overlay" @click.self="showSubjectManageModal = false">
+      <div class="modal-content small">
+        <div class="modal-header">
+          <span class="modal-title">管理学科</span>
+          <button class="modal-close" @click="showSubjectManageModal = false">
+            <i class="layui-icon layui-icon-close"></i>
+          </button>
+        </div>
+        <div class="modal-body">
+          <div v-if="subjectBooks.length === 0" class="empty-state">
+            暂无学科，点击下方按钮添加
+          </div>
+          <div v-else class="subject-list">
+            <div v-for="subject in subjectBooks" :key="subject.id" class="subject-item">
+              <div class="subject-info">
+                <span class="subject-icon">{{ subject.icon }}</span>
+                <span class="subject-name">{{ subject.name }}</span>
+              </div>
+              <div class="subject-actions">
+                <button class="action-btn edit" @click="editSubject(subject)">
+                  <i class="layui-icon layui-icon-edit"></i>
+                </button>
+                <button class="action-btn delete" @click="deleteSubject(subject)">
+                  <i class="layui-icon layui-icon-delete"></i>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn-primary" @click="showAddSubjectModal = true; showSubjectManageModal = false">
+            <i class="layui-icon layui-icon-add"></i>
+            添加学科
+          </button>
+        </div>
+      </div>
+    </div>
+
     <div v-if="showAddSubjectModal" class="modal-overlay" @click.self="showAddSubjectModal = false">
       <div class="modal-content small">
         <div class="modal-header">
-          <span class="modal-title">添加学科错题本</span>
+          <span class="modal-title">{{ editingSubject ? '编辑学科' : '添加学科' }}</span>
           <button class="modal-close" @click="showAddSubjectModal = false">
             <i class="layui-icon layui-icon-close"></i>
           </button>
@@ -292,7 +312,141 @@
         </div>
         <div class="modal-footer">
           <button class="btn-secondary" @click="showAddSubjectModal = false">取消</button>
-          <button class="btn-primary" @click="confirmAddSubject">添加</button>
+          <button class="btn-primary" @click="confirmAddSubject">
+            {{ editingSubject ? '保存' : '添加' }}
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div v-if="showManageModal" class="modal-overlay" @click.self="showManageModal = false">
+      <div class="modal-content">
+        <div class="modal-header">
+          <span class="modal-title">错题本管理</span>
+          <button class="modal-close" @click="showManageModal = false">
+            <i class="layui-icon layui-icon-close"></i>
+          </button>
+        </div>
+        <div class="modal-body">
+          <div class="manage-tabs">
+            <button v-for="tab in manageTabs" :key="tab.key" class="manage-tab"
+              :class="{ active: activeManageTab === tab.key }" @click="activeManageTab = tab.key">
+              {{ tab.label }}
+            </button>
+          </div>
+
+          <div v-show="activeManageTab === 'source'" class="manage-section">
+            <div class="section-header">
+              <span class="section-title">来源类型</span>
+              <button class="add-type-btn" @click="showAddSourceTypeInput = !showAddSourceTypeInput">
+                <i class="layui-icon layui-icon-add"></i>
+                添加
+              </button>
+            </div>
+            <div v-if="showAddSourceTypeInput" class="add-type-row">
+              <input type="text" v-model="newSourceTypeName" placeholder="输入来源类型名称" class="form-input"
+                @keyup.enter="addSourceTypeConfig" />
+              <button class="btn-primary small" @click="addSourceTypeConfig">确认</button>
+            </div>
+            <div v-if="allSourceTypes.length === 0" class="empty-state">暂无来源类型</div>
+            <div v-else class="type-list">
+              <div v-for="type in allSourceTypes" :key="type" class="type-item">
+                <span class="type-name">{{ type }}</span>
+                <div class="type-actions">
+                  <button class="action-btn edit" @click="editSourceType(type)">
+                    <i class="layui-icon layui-icon-edit"></i>
+                  </button>
+                  <button class="action-btn delete" @click="deleteSourceType(type)">
+                    <i class="layui-icon layui-icon-delete"></i>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div v-show="activeManageTab === 'sticking'" class="manage-section">
+            <div class="section-header">
+              <span class="section-title">卡点类型</span>
+              <button class="add-type-btn" @click="showAddStickingTypeInput = !showAddStickingTypeInput">
+                <i class="layui-icon layui-icon-add"></i>
+                添加
+              </button>
+            </div>
+            <div v-if="showAddStickingTypeInput" class="add-type-row">
+              <input type="text" v-model="newStickingTypeName" placeholder="输入卡点类型名称" class="form-input"
+                @keyup.enter="addStickingTypeConfig" />
+              <button class="btn-primary small" @click="addStickingTypeConfig">确认</button>
+            </div>
+            <div v-if="stickingTypes.length === 0" class="empty-state">暂无卡点类型</div>
+            <div v-else class="type-list">
+              <div v-for="type in stickingTypes" :key="type" class="type-item">
+                <span class="type-name">{{ type }}</span>
+                <div class="type-actions">
+                  <button class="action-btn edit" @click="editStickingType(type)">
+                    <i class="layui-icon layui-icon-edit"></i>
+                  </button>
+                  <button class="action-btn delete" @click="deleteStickingType(type)">
+                    <i class="layui-icon layui-icon-delete"></i>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div v-show="activeManageTab === 'subject'" class="manage-section">
+            <div class="section-header">
+              <span class="section-title">学科</span>
+              <button class="add-type-btn" @click="showAddSubjectModal = true; showManageModal = false">
+                <i class="layui-icon layui-icon-add"></i>
+                添加
+              </button>
+            </div>
+            <div v-if="subjectBooks.length === 0" class="empty-state">暂无学科</div>
+            <div v-else class="type-list">
+              <div v-for="subject in subjectBooks" :key="subject.id" class="type-item">
+                <div class="subject-info">
+                  <span class="subject-icon">{{ subject.icon }}</span>
+                  <span class="type-name">{{ subject.name }}</span>
+                </div>
+                <div class="type-actions">
+                  <button class="action-btn edit" @click="editSubject(subject); showManageModal = false">
+                    <i class="layui-icon layui-icon-edit"></i>
+                  </button>
+                  <button class="action-btn delete" @click="deleteSubject(subject)">
+                    <i class="layui-icon layui-icon-delete"></i>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn-secondary" @click="showManageModal = false">关闭</button>
+        </div>
+      </div>
+    </div>
+
+    <div v-if="showEditTypeModal" class="modal-overlay" @click.self="showEditTypeModal = false">
+      <div class="modal-content small">
+        <div class="modal-header">
+          <span class="modal-title">编辑类型</span>
+          <button class="modal-close" @click="showEditTypeModal = false">
+            <i class="layui-icon layui-icon-close"></i>
+          </button>
+        </div>
+        <div class="modal-body">
+          <div class="form-group">
+            <label>原类型名称</label>
+            <input type="text" :value="editingTypeOldName" disabled class="form-input" />
+          </div>
+          <div class="form-group">
+            <label>新类型名称</label>
+            <input type="text" v-model="editingTypeNewName" placeholder="输入新的类型名称" class="form-input" />
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn-secondary" @click="showEditTypeModal = false">取消</button>
+          <button class="btn-primary" @click="confirmEditType">保存</button>
         </div>
       </div>
     </div>
@@ -339,18 +493,31 @@ const showAddTagModal = ref(false);
 const currentTagItem = ref(null);
 const newTagValue = ref('');
 const showAddSubjectModal = ref(false);
+const showSubjectManageModal = ref(false);
+const editingSubject = ref(null);
 const newSubjectName = ref('');
 const newSubjectIcon = ref('📖');
 const iconOptions = ['📐', '📚', '⚛️', '🧪', '📖', '📜', '🌍', '🧬', '🎨', '🎵'];
+const showManageModal = ref(false);
+const activeManageTab = ref('source');
+const manageTabs = [
+  { key: 'source', label: '来源类型' },
+  { key: 'sticking', label: '卡点类型' },
+  { key: 'subject', label: '学科' }
+];
+const showAddSourceTypeInput = ref(false);
+const newSourceTypeName = ref('');
+const showAddStickingTypeInput = ref(false);
+const newStickingTypeName = ref('');
+const showEditTypeModal = ref(false);
+const editingTypeOldName = ref('');
+const editingTypeNewName = ref('');
+const editingTypeCategory = ref('');
 const stickingTypes = computed(() => {
-  const all = dataManager.errorbook.getStickingTypes();
-  const defaults = ['概念不清', '方法不当', '计算错误', '审题偏差', '其他'];
-  return [...defaults, ...all].filter((v, i, a) => a.indexOf(v) === i);
+  return dataManager.errorbookConfig.getStickingTypes();
 });
 const allSourceTypes = computed(() => {
-  const all = dataManager.errorbook.getAllSourceTypes();
-  const defaults = ['1000', '30讲', 'ppt', '练习册', '试卷', '其他'];
-  return [...defaults, ...all].filter((v, i, a) => a.indexOf(v) === i);
+  return dataManager.errorbookConfig.getSourceTypes();
 });
 const statusOptions = [
   { value: 'pending', label: '待复习', color: '#3b82f6' },
@@ -533,18 +700,105 @@ const removeTagFromError = (id, tag) => {
   dataManager.errorbook.removeTag(id, tag);
   loadData();
 };
+const editSubject = (subject) => {
+  editingSubject.value = subject;
+  newSubjectName.value = subject.name;
+  newSubjectIcon.value = subject.icon;
+  showSubjectManageModal.value = false;
+  showAddSubjectModal.value = true;
+};
+const addSourceTypeConfig = () => {
+  const name = newSourceTypeName.value.trim();
+  if (!name) {
+    layer.msg('请输入类型名称', { icon: 5 });
+    return;
+  }
+  dataManager.errorbookConfig.addSourceType(name);
+  layer.msg('添加成功', { icon: 1 });
+  newSourceTypeName.value = '';
+  showAddSourceTypeInput.value = false;
+};
+const deleteSourceType = (type) => {
+  layer.confirm(`确定要删除来源类型「${type}」吗？已使用此类型的错题将保留原数据。`, {
+    icon: 3,
+    title: '确认删除'
+  }, (index) => {
+    layer.close(index);
+    dataManager.errorbookConfig.removeSourceType(type);
+    layer.msg('删除成功', { icon: 1 });
+  });
+};
+const editSourceType = (type) => {
+  editingTypeOldName.value = type;
+  editingTypeNewName.value = type;
+  editingTypeCategory.value = 'source';
+  showEditTypeModal.value = true;
+};
+const addStickingTypeConfig = () => {
+  const name = newStickingTypeName.value.trim();
+  if (!name) {
+    layer.msg('请输入类型名称', { icon: 5 });
+    return;
+  }
+  dataManager.errorbookConfig.addStickingType(name);
+  layer.msg('添加成功', { icon: 1 });
+  newStickingTypeName.value = '';
+  showAddStickingTypeInput.value = false;
+};
+const deleteStickingType = (type) => {
+  layer.confirm(`确定要删除卡点类型「${type}」吗？已使用此类型的错题将保留原数据。`, {
+    icon: 3,
+    title: '确认删除'
+  }, (index) => {
+    layer.close(index);
+    dataManager.errorbookConfig.removeStickingType(type);
+    layer.msg('删除成功', { icon: 1 });
+  });
+};
+const editStickingType = (type) => {
+  editingTypeOldName.value = type;
+  editingTypeNewName.value = type;
+  editingTypeCategory.value = 'sticking';
+  showEditTypeModal.value = true;
+};
+const confirmEditType = () => {
+  const newName = editingTypeNewName.value.trim();
+  if (!newName) {
+    layer.msg('请输入新类型名称', { icon: 5 });
+    return;
+  }
+  if (editingTypeCategory.value === 'source') {
+    dataManager.errorbookConfig.updateSourceType(editingTypeOldName.value, newName);
+  } else if (editingTypeCategory.value === 'sticking') {
+    dataManager.errorbookConfig.updateStickingType(editingTypeOldName.value, newName);
+  }
+  layer.msg('修改成功', { icon: 1 });
+  showEditTypeModal.value = false;
+};
+const deleteSubject = (subject) => {
+  layer.confirm(`确定要删除学科「${subject.name}」吗？删除后相关错题将不受影响。`, {
+    icon: 3,
+    title: '确认删除'
+  }, (index) => {
+    layer.close(index);
+    dataManager.subjectBooks.delete(subject.id);
+    layer.msg('删除成功', { icon: 1 });
+    loadData();
+  });
+};
 const confirmAddSubject = () => {
   if (!newSubjectName.value.trim()) {
     layer.msg('请输入学科名称', { icon: 5 });
     return;
   }
-  if (contextMenu.value.actionData) {
+  if (editingSubject.value) {
     dataManager.subjectBooks.update({
-      id: contextMenu.value.actionData.id,
+      id: editingSubject.value.id,
       name: newSubjectName.value,
       icon: newSubjectIcon.value
     });
     layer.msg('修改成功', { icon: 1 });
+    editingSubject.value = null;
   }
   else {
     dataManager.subjectBooks.add({
@@ -576,27 +830,63 @@ onUnmounted(() => {
 
 <style scoped>
 .errorbook-page {
-  padding: 24px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  height: calc(100vh - 60px);
 }
 
-.page-header {
+.header-bar {
+  position: sticky;
+  top: 0;
+  z-index: 100;
   display: flex;
   justify-content: space-between;
-  align-items: flex-start;
-  margin-bottom: 24px;
+  align-items: center;
+  padding: 16px 24px;
+  background: #fff;
+  border-bottom: 1px solid #f1f5f9;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.header-left {
+  display: flex;
+  flex-direction: column;
 }
 
 .page-title {
-  font-size: 28px;
+  font-size: 22px;
   font-weight: 700;
   color: #1e293b;
   margin: 0;
 }
 
 .page-desc {
-  font-size: 14px;
+  font-size: 12px;
   color: #64748b;
-  margin-top: 6px;
+  margin-top: 2px;
+}
+
+.header-stats {
+  display: flex;
+  gap: 16px;
+}
+
+.mini-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.mini-stat-icon {
+  font-size: 18px;
+}
+
+.mini-stat-value {
+  font-size: 16px;
+  font-weight: 700;
+  color: #1e293b;
 }
 
 .add-btn {
@@ -619,95 +909,214 @@ onUnmounted(() => {
   box-shadow: 0 8px 24px rgba(30, 77, 123, 0.3);
 }
 
-.stats-row {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 16px;
-  margin-bottom: 24px;
-}
-
-.stat-card {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  padding: 20px;
-  background: #fff;
-  border-radius: 16px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
-}
-
-.stat-icon {
-  width: 48px;
-  height: 48px;
-  border-radius: 12px;
+.manage-btn {
+  width: 40px;
+  height: 40px;
+  background: #fef3c7;
+  border: none;
+  border-radius: 10px;
+  color: #d97706;
+  font-size: 18px;
+  cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 22px;
-  color: #fff;
+  transition: all 0.2s ease;
 }
 
-.stat-icon.total-icon {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+.manage-btn:hover {
+  background: #fde68a;
+  transform: scale(1.05);
 }
 
-.stat-icon.pending-icon {
-  background: linear-gradient(135deg, #3b82f6 0%, #60a5fa 100%);
-}
-
-.stat-icon.mastered-icon {
-  background: linear-gradient(135deg, #10b981 0%, #34d399 100%);
-}
-
-.stat-icon.retry-icon {
-  background: linear-gradient(135deg, #f59e0b 0%, #fbbf24 100%);
-}
-
-.stat-info {
-  flex: 1;
-}
-
-.stat-value {
-  font-size: 24px;
-  font-weight: 700;
-  color: #1e293b;
-}
-
-.stat-label {
-  font-size: 13px;
-  color: #64748b;
-  margin-top: 2px;
-}
-
-.main-content {
-  display: grid;
-  grid-template-columns: 200px 260px 1fr;
-  gap: 20px;
-}
-
-.subject-panel {
-  background: #fff;
-  border-radius: 20px;
-  padding: 20px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
-  position: sticky;
-  top: 24px;
-  height: fit-content;
-}
-
-.panel-header {
+.manage-tabs {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 16px;
-  padding-bottom: 12px;
+  gap: 8px;
+  margin-bottom: 20px;
+  padding-bottom: 16px;
   border-bottom: 1px solid #f1f5f9;
 }
 
-.panel-title {
-  font-size: 15px;
-  font-weight: 600;
+.manage-tab {
+  padding: 8px 20px;
+  background: #f8fafc;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #64748b;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.manage-tab.active {
+  background: #dbeafe;
+  color: #2563eb;
+}
+
+.manage-tab:hover {
+  background: #f1f5f9;
+}
+
+.manage-section {
+  padding-top: 10px;
+}
+
+.add-type-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background: #dbeafe;
+  color: #2563eb;
+  border: none;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.add-type-btn:hover {
+  background: #bfdbfe;
+}
+
+.add-type-row {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.add-type-row .form-input {
+  flex: 1;
+  max-width: 300px;
+}
+
+.btn-primary.small {
+  padding: 8px 16px;
+  font-size: 13px;
+}
+
+.type-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.type-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  background: #f8fafc;
+  border-radius: 10px;
+}
+
+.type-name {
+  font-size: 14px;
+  font-weight: 500;
+  color: #334155;
+}
+
+.type-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.filter-bar {
+  position: sticky;
+  top: 70px;
+  z-index: 99;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 20px;
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+
+.filter-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.filter-label {
+  font-size: 13px;
+  font-weight: 500;
   color: #475569;
+  white-space: nowrap;
+}
+
+.select-wrapper {
+  position: relative;
+}
+
+.filter-select {
+  padding: 8px 32px 8px 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  font-size: 13px;
+  color: #334155;
+  background: #fff;
+  cursor: pointer;
+  outline: none;
+  min-width: 120px;
+  appearance: none;
+}
+
+.filter-select:hover {
+  border-color: #cbd5e1;
+}
+
+.filter-select:focus {
+  border-color: #1e4d7b;
+}
+
+.filter-select-icon {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 12px;
+  color: #94a3b8;
+  pointer-events: none;
+}
+
+.search-group {
+  flex: 1;
+  min-width: 200px;
+  max-width: 300px;
+  position: relative;
+}
+
+.search-group .search-input {
+  width: 100%;
+  padding: 8px 36px 8px 12px;
+}
+
+.search-icon {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 14px;
+  color: #94a3b8;
+}
+
+.review-group {
+  display: flex;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.review-group .review-btn {
+  margin-bottom: 0;
+  padding: 8px 16px;
+  font-size: 12px;
 }
 
 .add-subject-btn {
@@ -722,115 +1131,126 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.add-subject-btn:hover {
+  background: #bfdbfe;
+  transform: scale(1.05);
+}
+
+.edit-subject-btn {
+  width: 32px;
+  height: 32px;
+  background: #fef3c7;
+  border: none;
+  border-radius: 8px;
+  color: #d97706;
+  font-size: 16px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.edit-subject-btn:hover {
+  background: #fde68a;
+  transform: scale(1.05);
+}
+
+.filter-add-btn {
+  margin-left: auto;
+  padding: 8px 20px;
+  font-size: 14px;
 }
 
 .subject-list {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
+  max-height: 300px;
+  overflow-y: auto;
 }
 
 .subject-item {
   display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px;
+  background: #f8fafc;
+  border-radius: 10px;
+  margin-bottom: 8px;
+}
+
+.subject-item:last-child {
+  margin-bottom: 0;
+}
+
+.subject-info {
+  display: flex;
   align-items: center;
   gap: 10px;
-  padding: 12px;
-  border-radius: 12px;
-  cursor: pointer;
-  transition: all 0.2s ease;
 }
 
-.subject-item:hover {
-  background: #f1f5f9;
+.subject-info .subject-icon {
+  font-size: 20px;
 }
 
-.subject-item.active {
-  background: linear-gradient(135deg, #1e4d7b 0%, #3d7ab5 100%);
-  color: #fff;
-}
-
-.subject-icon {
-  font-size: 18px;
-}
-
-.subject-name {
-  flex: 1;
+.subject-info .subject-name {
   font-size: 14px;
   font-weight: 500;
+  color: #334155;
 }
 
-.subject-count {
-  font-size: 12px;
-  padding: 2px 8px;
-  background: rgba(0, 0, 0, 0.1);
-  border-radius: 10px;
-}
-
-.subject-item.active .subject-count {
-  background: rgba(255, 255, 255, 0.2);
-}
-
-.filter-panel {
-  background: #fff;
-  border-radius: 20px;
-  padding: 20px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
-  position: sticky;
-  top: 24px;
-  height: fit-content;
-}
-
-.filter-section {
-  margin-bottom: 20px;
-}
-
-.filter-title {
-  font-size: 14px;
-  font-weight: 600;
-  color: #475569;
-  margin-bottom: 10px;
-}
-
-.filter-options {
+.subject-actions {
   display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
+  gap: 8px;
 }
 
-.filter-btn {
-  padding: 6px 10px;
-  background: #f1f5f9;
+.action-btn {
+  width: 32px;
+  height: 32px;
   border: none;
   border-radius: 8px;
-  font-size: 12px;
-  color: #475569;
+  font-size: 14px;
   cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   transition: all 0.2s ease;
 }
 
-.filter-btn:hover {
-  background: #e2e8f0;
+.action-btn.edit {
+  background: #dbeafe;
+  color: #2563eb;
 }
 
-.filter-btn.active {
-  background: #1e4d7b;
-  color: #fff;
+.action-btn.edit:hover {
+  background: #bfdbfe;
 }
 
-.status-btn {
-  background: #f1f5f9 !important;
-  color: #475569 !important;
+.action-btn.delete {
+  background: #fee2e2;
+  color: #ef4444;
 }
 
-.tag-btn.active {
-  background: #8b5cf6 !important;
+.action-btn.delete:hover {
+  background: #fecaca;
+}
+
+.main-content {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 16px 24px;
+  padding-top: 0;
 }
 
 .search-input {
   width: 100%;
   padding: 10px 12px;
   border: 1px solid #e2e8f0;
-  border-radius: 8px;
+  border-radius: 10px;
   font-size: 13px;
   outline: none;
 }
@@ -839,19 +1259,12 @@ onUnmounted(() => {
   border-color: #1e4d7b;
 }
 
-.review-section {
-  margin-top: 20px;
-  padding-top: 20px;
-  border-top: 1px solid #f1f5f9;
-}
-
 .review-btn {
-  width: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 6px;
-  padding: 10px;
+  padding: 10px 16px;
   background: linear-gradient(135deg, #1e4d7b 0%, #3d7ab5 100%);
   color: #fff;
   border: none;
@@ -859,7 +1272,6 @@ onUnmounted(() => {
   font-size: 13px;
   font-weight: 500;
   cursor: pointer;
-  margin-bottom: 8px;
   transition: all 0.25s ease;
 }
 
@@ -1428,46 +1840,176 @@ onUnmounted(() => {
   cursor: pointer;
 }
 
-@media (max-width: 1200px) {
-  .main-content {
-    grid-template-columns: 180px 1fr;
-  }
-
-  .filter-panel {
-    display: none;
-  }
-}
-
 @media (max-width: 768px) {
-  .main-content {
-    grid-template-columns: 1fr;
+  .filter-bar {
+    position: sticky;
+    top: 90px;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+    padding: 12px 16px;
+    margin: 0 16px;
   }
 
-  .subject-panel {
-    position: static;
+  .filter-group {
+    width: 100%;
   }
 
-  .stats-row {
-    grid-template-columns: repeat(2, 1fr);
+  .filter-group:not(.search-group):not(.review-group):not(.action-group) {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 0;
+    border-bottom: 1px solid #f1f5f9;
+  }
+
+  .filter-group:not(.search-group):not(.review-group):not(.action-group) .filter-label {
+    flex-shrink: 0;
+    width: 60px;
+    font-size: 13px;
+  }
+
+  .filter-group:not(.search-group):not(.review-group):not(.action-group) .select-wrapper {
+    flex: 1;
+    max-width: calc(100% - 80px);
+  }
+
+  .filter-group:not(.search-group):not(.review-group):not(.action-group) .add-subject-btn {
+    margin-left: 8px;
+  }
+
+  .select-wrapper {
+    width: 100%;
+  }
+
+  .filter-select {
+    width: 100%;
+    padding: 10px 32px 10px 12px;
+    font-size: 14px;
+  }
+
+  .search-group {
+    max-width: 100%;
+    order: -1;
+  }
+
+  .search-group .search-input {
+    padding: 12px 36px 12px 12px;
+    font-size: 14px;
+  }
+
+  .review-group {
+    margin-left: 0;
+    justify-content: center;
+    gap: 10px;
+    padding: 8px 0;
+  }
+
+  .review-group .review-btn {
+    padding: 10px 16px;
+    font-size: 13px;
+  }
+
+  .filter-add-btn {
+    margin-left: 0;
+    padding: 12px 20px;
+    font-size: 14px;
+    width: 100%;
+    justify-content: center;
+  }
+
+  .manage-btn {
+    width: 100%;
+    height: 44px;
+    font-size: 16px;
+    border-radius: 10px;
+  }
+
+  .action-group {
+    display: flex;
+    gap: 10px;
+    order: 10;
+  }
+
+  .header-bar {
+    flex-direction: column;
+    gap: 12px;
+    padding: 12px 16px;
+    align-items: flex-start;
+  }
+
+  .header-stats {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .page-title {
+    font-size: 22px;
+  }
+
+  .page-desc {
+    font-size: 13px;
   }
 
   .card-actions {
     flex-wrap: wrap;
+    gap: 8px;
   }
 
   .action-btn {
     flex: 1;
-    min-width: calc(33% - 6px);
+    min-width: calc(50% - 4px);
     justify-content: center;
-  }
-
-  .page-header {
-    flex-direction: column;
-    gap: 16px;
+    padding: 10px 8px;
+    font-size: 13px;
   }
 
   .tags-row {
     flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .main-content {
+    gap: 12px;
+    padding: 12px 16px;
+    padding-top: 0;
+  }
+
+  .errorbook-card {
+    padding: 16px;
+  }
+
+  .card-header {
+    margin-bottom: 12px;
+  }
+
+  .subject-tag {
+    padding: 4px 10px;
+    font-size: 12px;
+  }
+
+  .status-badge {
+    padding: 3px 8px;
+    font-size: 11px;
+  }
+
+  .source-info {
+    font-size: 13px;
+  }
+
+  .sticking-tags {
+    gap: 4px;
+    margin-bottom: 12px;
+  }
+
+  .sticking-tag {
+    padding: 3px 8px;
+    font-size: 11px;
+  }
+
+  .card-footer {
+    padding-top: 12px;
+    font-size: 12px;
   }
 }
 </style>

@@ -205,7 +205,6 @@ const props = defineProps({
 const emit = defineEmits(['close', 'saved']);
 const subjectBooks = ref([]);
 const newSourceType = ref('');
-const sourceTypeDefaults = ['书本', '试卷', '作业', '课堂笔记', '练习册', '其他'];
 const selectedSourceTypes = ref([]);
 const formData = reactive({
   subject: '数学',
@@ -219,7 +218,8 @@ const formData = reactive({
   similarQuestions: []
 });
 const sourceTypeOptions = computed(() => {
-  return sourceTypeDefaults.filter(t => !selectedSourceTypes.value.includes(t));
+  const configTypes = dataManager.errorbookConfig.getSourceTypes();
+  return configTypes.filter(t => !selectedSourceTypes.value.includes(t));
 });
 const loadSubjectBooks = () => {
   subjectBooks.value = dataManager.subjectBooks.getAll();
@@ -247,6 +247,7 @@ const addSourceType = (type = null) => {
     return;
   if (!selectedSourceTypes.value.includes(value)) {
     selectedSourceTypes.value.push(value);
+    dataManager.errorbookConfig.addSourceType(value);
   }
   newSourceType.value = '';
 };
