@@ -5,38 +5,11 @@ const STORAGE_KEY_PREFIX = 'self_manage_system_data'
 const USERS_STORAGE_KEY = 'self_manage_system_users'
 const CURRENT_USER_ID_KEY = 'self_manage_system_current_user_id'
 
-let currentUserId = null
-let usersData = null
-
-const setCurrentUserId = (userId) => {
-  currentUserId = userId
-  try {
-    if (userId) {
-      localStorage.setItem(CURRENT_USER_ID_KEY, userId)
-    } else {
-      localStorage.removeItem(CURRENT_USER_ID_KEY)
-    }
-  } catch (error) {
-    console.error('保存当前用户ID失败:', error)
-  }
-}
-
-const restoreCurrentUserId = () => {
-  try {
-    const stored = localStorage.getItem(CURRENT_USER_ID_KEY)
-    if (stored) {
-      currentUserId = stored
-    }
-  } catch (error) {
-    console.error('恢复当前用户ID失败:', error)
-  }
-}
-
 const defaultUsers = [
   {
     id: '1',
     username: 'admin',
-    password: '$2a$10$rB8f5y9L7u6K5H3G7F2D1N9H4G3F2D1S8D7F4G2H1J6K8L7',
+    password: '$2b$10$flnM9pa.0hz03DA70fH/TetTYLRVu3rjCmiwFf3FZsXyIXzfFi.kC',
     role: 'admin',
     status: 1,
     createTime: '2024-01-01 00:00:00'
@@ -44,7 +17,7 @@ const defaultUsers = [
   {
     id: '2',
     username: 'teacher001',
-    password: '$2a$10$rB8f5y9L7u6K5H3G7F2D1N9H4G3F2D1S8D7F4G2H1J6K8L7',
+    password: '$2b$10$HRpD1/bsVGD4B8dsR4Au1O.QHYiQ9Qqvaq.BprjO0fbv27omiTWd2',
     role: 'teacher',
     status: 1,
     createTime: '2024-01-02 10:00:00'
@@ -52,7 +25,7 @@ const defaultUsers = [
   {
     id: '3',
     username: 'student001',
-    password: '$2a$10$rB8f5y9L7u6K5H3G7F2D1N9H4G3F2D1S8D7F4G2H1J6K8L7',
+    password: '$2b$10$LTsDExVSuNH0n9k5kSiq1ewMk.8ELqxgFcpWLVMJYD2wpoUEBgR5a',
     role: 'user',
     status: 1,
     createTime: '2024-01-03 14:00:00'
@@ -60,47 +33,12 @@ const defaultUsers = [
   {
     id: '4',
     username: 'student002',
-    password: '$2a$10$rB8f5y9L7u6K5H3G7F2D1N9H4G3F2D1S8D7F4G2H1J6K8L7',
+    password: '$2b$10$m1ECa23ZecGmTlw0FQSYJ.WjXXXktGH7dyUU7y0VGlxOuDZEW7ax.',
     role: 'user',
     status: 1,
     createTime: '2024-01-04 16:00:00'
   }
 ]
-
-const loadUsers = () => {
-  try {
-    const stored = localStorage.getItem(USERS_STORAGE_KEY)
-    if (stored) {
-      usersData = JSON.parse(stored)
-    } else {
-      usersData = JSON.parse(JSON.stringify(defaultUsers))
-      saveUsers()
-    }
-  } catch (error) {
-    console.error('加载用户数据失败:', error)
-    usersData = JSON.parse(JSON.stringify(defaultUsers))
-    saveUsers()
-  }
-  return usersData
-}
-
-const saveUsers = () => {
-  try {
-    localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(usersData))
-  } catch (error) {
-    console.error('保存用户数据失败:', error)
-  }
-}
-
-restoreCurrentUserId()
-loadUsers()
-
-const getStorageKey = () => {
-  if (currentUserId) {
-    return `${STORAGE_KEY_PREFIX}_${currentUserId}`
-  }
-  return STORAGE_KEY_PREFIX
-}
 
 const defaultData = {
   todos: [
@@ -215,7 +153,65 @@ const defaultData = {
   users: []
 }
 
-let appData = reactive(JSON.parse(JSON.stringify(defaultData)))
+let currentUserId = null
+let usersData = null
+let appData = null
+
+const setCurrentUserId = (userId) => {
+  currentUserId = userId
+  try {
+    if (userId) {
+      localStorage.setItem(CURRENT_USER_ID_KEY, userId)
+    } else {
+      localStorage.removeItem(CURRENT_USER_ID_KEY)
+    }
+  } catch (error) {
+    console.error('保存当前用户ID失败:', error)
+  }
+}
+
+const restoreCurrentUserId = () => {
+  try {
+    const stored = localStorage.getItem(CURRENT_USER_ID_KEY)
+    if (stored) {
+      currentUserId = stored
+    }
+  } catch (error) {
+    console.error('恢复当前用户ID失败:', error)
+  }
+}
+
+const loadUsers = () => {
+  try {
+    const stored = localStorage.getItem(USERS_STORAGE_KEY)
+    if (stored) {
+      usersData = JSON.parse(stored)
+    } else {
+      usersData = JSON.parse(JSON.stringify(defaultUsers))
+      saveUsers()
+    }
+  } catch (error) {
+    console.error('加载用户数据失败:', error)
+    usersData = JSON.parse(JSON.stringify(defaultUsers))
+    saveUsers()
+  }
+  return usersData
+}
+
+const saveUsers = () => {
+  try {
+    localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(usersData))
+  } catch (error) {
+    console.error('保存用户数据失败:', error)
+  }
+}
+
+const getStorageKey = () => {
+  if (currentUserId) {
+    return `${STORAGE_KEY_PREFIX}_${currentUserId}`
+  }
+  return STORAGE_KEY_PREFIX
+}
 
 const loadData = () => {
   try {
@@ -270,11 +266,11 @@ const validateData = () => {
   }
 }
 
+let onDataChangedCallback = null
+
 const setOnDataChangedCallback = (callback) => {
   onDataChangedCallback = callback
 }
-
-let onDataChangedCallback = null
 
 const saveData = () => {
   try {
@@ -336,6 +332,9 @@ const updateUsers = (newUsers) => {
   usersData = newUsers
   saveUsers()
 }
+
+restoreCurrentUserId()
+loadUsers()
 
 const userModule = {
   getAll: () => {
