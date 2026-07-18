@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref, computed, onMounted } from 'vue'
-import { baiduCloud } from '@/utils/baiduCloud'
+import { supabaseSync } from '@/utils/supabaseSync'
 import { dataManager } from '@/utils/dataManager'
 
 export const useSyncStore = defineStore('sync', () => {
@@ -18,7 +18,7 @@ export const useSyncStore = defineStore('sync', () => {
   const isLoggedIn = computed(() => loginStatus.value.loggedIn)
 
   const updateLoginStatus = () => {
-    loginStatus.value = baiduCloud.getLoginStatus()
+    loginStatus.value = supabaseSync.getLoginStatus()
   }
 
   const startSync = async (direction = 'upload', showNotification = true) => {
@@ -31,36 +31,48 @@ export const useSyncStore = defineStore('sync', () => {
     syncError.value = ''
 
     try {
-      if (!baiduCloud.isLoggedIn()) {
-        throw new Error('请先登录百度网盘')
+      if (!supabaseSync.isLoggedIn()) {
+        throw new Error('请先登录')
       }
 
       if (direction === 'upload') {
         const dataString = dataManager.exportData()
-        await baiduCloud.syncDataToCloud(dataString)
-        lastSyncTime.value = new Date().toLocaleString('zh-CN')
-        dataManager.sync.setLastSyncTime(lastSyncTime.value)
-        cloudSyncVersion.value = dataManager.getData().syncVersion || 1
-        syncStatus.value = 'upload_success'
-        return { success: true, message: '数据上传成功' }
-      } else {
-        const dataString = await baiduCloud.syncDataFromCloud()
-        const success = dataManager.importData(dataString)
-        if (success) {
-          const data = dataManager.getData()
+        const result = await supabaseSync.uploadData(dataString)
+        if (result.success) {
           lastSyncTime.value = new Date().toLocaleString('zh-CN')
           dataManager.sync.setLastSyncTime(lastSyncTime.value)
-          cloudSyncVersion.value = data.syncVersion || 1
-          syncStatus.value = 'download_success'
-          hasNewData.value = false
-          if (showNotification) {
-            try {
-              layer.msg('数据同步成功', { icon: 1 })
-            } catch (e) { }
-          }
-          return { success: true, message: '数据下载成功' }
+          cloudSyncVersion.value = dataManager.getData().syncVersion || 1
+          syncStatus.value = 'upload_success'
+          return { success: true, message: '数据上传成功' }
         } else {
-          throw new Error('数据格式错误')
+          throw new Error(result.message)
+        }
+      } else {
+        const result = await supabaseSync.downloadData()
+        if (result.success) {
+          if (result.data) {
+            const success = dataManager.importData(result.data)
+            if (success) {
+              const data = dataManager.getData()
+              lastSyncTime.value = new Date().toLocaleString('zh-CN')
+              dataManager.sync.setLastSyncTime(lastSyncTime.value)
+              cloudSyncVersion.value = result.syncVersion || data.syncVersion || 1
+              syncStatus.value = 'download_success'
+              hasNewData.value = false
+              if (showNotification) {
+                try {
+                  layer.msg('数据同步成功', { icon: 1 })
+                } catch (e) {}
+              }
+              return { success: true, message: '数据下载成功' }
+            } else {
+              throw new Error('数据格式错误')
+            }
+          } else {
+            return { success: true, message: '云端暂无数据' }
+          }
+        } else {
+          throw new Error(result.message)
         }
       }
     } catch (error) {
@@ -87,7 +99,7 @@ export const useSyncStore = defineStore('sync', () => {
   }
 
   const syncIfNeeded = async () => {
-    if (!autoSyncEnabled.value || !baiduCloud.isLoggedIn()) {
+    if (!autoSyncEnabled.value || !supabaseSync.isLoggedIn()) {
       return
     }
 
@@ -95,19 +107,11 @@ export const useSyncStore = defineStore('sync', () => {
       const localData = dataManager.getData()
       const localVersion = localData.syncVersion || 1
       const localLastModified = localData.lastModifiedTime || 0
-      const localLastSync = localData.lastSyncTime
 
-      if (!localLastSync) {
-        return
-      }
-
-      const cloudDataString = await baiduCloud.syncDataFromCloud()
-      const cloudData = JSON.parse(cloudDataString)
-      const cloudVersion = cloudData.syncVersion || 0
-      const cloudLastModified = cloudData.lastModifiedTime || 0
-
-      if (cloudVersion > localVersion || cloudLastModified > localLastModified) {
+      const result = await supabaseSync.checkForUpdates(localVersion, localLastModified)
+      if (result.hasUpdate) {
         hasNewData.value = true
+        cloudSyncVersion.value = result.cloudVersion
       }
     } catch (error) {
       console.log('检查云端数据失败:', error)
@@ -115,7 +119,7 @@ export const useSyncStore = defineStore('sync', () => {
   }
 
   const handleDataChanged = () => {
-    if (!autoSyncEnabled.value || !baiduCloud.isLoggedIn()) {
+    if (!autoSyncEnabled.value || !supabaseSync.isLoggedIn()) {
       return
     }
 
@@ -125,53 +129,96 @@ export const useSyncStore = defineStore('sync', () => {
 
     syncTimeout = setTimeout(async () => {
       await startSync('upload', false)
-    }, 5000)
+    }, 3000)
   }
 
-  const enableAutoSync = (enabled) => {
-    autoSyncEnabled.value = enabled
-    if (enabled && baiduCloud.isLoggedIn()) {
-      syncIfNeeded()
-    }
-  }
-
-  const checkCloudDataOnStartup = async () => {
-    if (!baiduCloud.isLoggedIn()) {
+  const handleCloudDataChanged = async (payload) => {
+    if (!autoSyncEnabled.value) {
       return
     }
 
     try {
       const localData = dataManager.getData()
       const localVersion = localData.syncVersion || 1
-      const cloudDataString = await baiduCloud.syncDataFromCloud()
-      const cloudData = JSON.parse(cloudDataString)
-      const cloudVersion = cloudData.syncVersion || 0
 
-      if (cloudVersion > localVersion) {
+      if (payload.syncVersion > localVersion) {
+        const success = dataManager.importData(payload.data)
+        if (success) {
+          lastSyncTime.value = new Date().toLocaleString('zh-CN')
+          dataManager.sync.setLastSyncTime(lastSyncTime.value)
+          cloudSyncVersion.value = payload.syncVersion
+          hasNewData.value = false
+        }
+      }
+    } catch (error) {
+      console.error('处理云端数据变更失败:', error)
+    }
+  }
+
+  const enableAutoSync = (enabled) => {
+    autoSyncEnabled.value = enabled
+    if (enabled && supabaseSync.isLoggedIn()) {
+      syncIfNeeded()
+      startRealtimeSubscription()
+    } else {
+      stopRealtimeSubscription()
+    }
+  }
+
+  const checkCloudDataOnStartup = async () => {
+    if (!supabaseSync.isLoggedIn()) {
+      return
+    }
+
+    try {
+      const localData = dataManager.getData()
+      const localVersion = localData.syncVersion || 1
+
+      const result = await supabaseSync.checkForUpdates(localVersion, 0)
+      if (result.hasUpdate) {
         hasNewData.value = true
+        cloudSyncVersion.value = result.cloudVersion
       }
     } catch (error) {
       console.log('启动时检查云端数据失败:', error)
     }
   }
 
-  const handleOAuthCallback = async (code) => {
-    try {
-      await baiduCloud.exchangeCodeForToken(code)
-      updateLoginStatus()
-      await syncIfNeeded()
-      return { success: true, message: '登录成功' }
-    } catch (error) {
-      console.error('OAuth回调处理失败:', error)
-      return { success: false, message: error.message }
+  const startRealtimeSubscription = () => {
+    if (!supabaseSync.isLoggedIn()) {
+      return
     }
+    supabaseSync.subscribeToChanges(handleCloudDataChanged)
   }
 
-  const logout = () => {
-    baiduCloud.clearTokens()
+  const stopRealtimeSubscription = () => {
+    supabaseSync.unsubscribeFromChanges()
+  }
+
+  const login = async (email, password) => {
+    const result = await supabaseSync.signInWithEmail(email, password)
+    if (result.success) {
+      updateLoginStatus()
+      await syncIfNeeded()
+      startRealtimeSubscription()
+    }
+    return result
+  }
+
+  const register = async (email, password) => {
+    const result = await supabaseSync.signUpWithEmail(email, password)
+    if (result.success) {
+      updateLoginStatus()
+    }
+    return result
+  }
+
+  const logout = async () => {
+    await supabaseSync.signOut()
     loginStatus.value = { loggedIn: false, message: '已退出登录' }
     syncStatus.value = 'idle'
     hasNewData.value = false
+    stopRealtimeSubscription()
     if (syncTimeout) {
       clearTimeout(syncTimeout)
     }
@@ -224,11 +271,14 @@ export const useSyncStore = defineStore('sync', () => {
     handleDataChanged,
     enableAutoSync,
     checkCloudDataOnStartup,
-    handleOAuthCallback,
+    login,
+    register,
     logout,
     clearError,
     dismissNewData,
-    getSyncStatusText
+    getSyncStatusText,
+    startRealtimeSubscription,
+    stopRealtimeSubscription
   }
 }, {
   persist: true

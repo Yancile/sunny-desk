@@ -192,23 +192,48 @@
     <div class="settings-card">
       <div class="card-header">
         <i class="layui-icon layui-icon-cloud"></i>
-        <span>百度网盘同步</span>
+        <span>云端数据同步</span>
       </div>
       <div class="card-body">
         <div class="sync-section">
-          <div class="sync-status">
+          <div v-if="!syncStore.isLoggedIn" class="login-form">
+            <div class="form-title">
+              <i class="layui-icon layui-icon-user"></i>
+              <span>{{ isRegisterMode ? '注册账户' : '登录云端账户' }}</span>
+            </div>
+            <div class="form-group">
+              <label>邮箱</label>
+              <input type="email" v-model="loginForm.email" class="layui-input" placeholder="请输入邮箱地址" />
+            </div>
+            <div class="form-group">
+              <label>密码</label>
+              <input type="password" v-model="loginForm.password" class="layui-input" placeholder="请输入密码" />
+            </div>
+            <div class="form-actions">
+              <button class="sync-btn submit-btn" :disabled="isLoggingIn" @click="handleSubmit">
+                <i class="layui-icon"
+                  :class="isLoggingIn ? 'layui-icon-loading' : (isRegisterMode ? 'layui-icon-add-circle' : 'layui-icon-login')"></i>
+                {{ isLoggingIn ? '处理中...' : (isRegisterMode ? '注册' : '登录') }}
+              </button>
+              <button class="sync-btn switch-btn" @click="toggleRegisterMode">
+                {{ isRegisterMode ? '已有账户？去登录' : '没有账户？去注册' }}
+              </button>
+            </div>
+            <div v-if="loginError" class="login-error">
+              <i class="layui-icon layui-icon-warning"></i>
+              <span>{{ loginError }}</span>
+            </div>
+          </div>
+
+          <div v-else class="sync-status">
             <div class="status-icon" :class="{ loggedIn: syncStore.isLoggedIn }">
               <i class="layui-icon" :class="syncStore.isLoggedIn ? 'layui-icon-cloud' : 'layui-icon-cloud-upload'"></i>
             </div>
             <div class="status-info">
-              <div class="status-title">{{ syncStore.isLoggedIn ? '已登录百度网盘' : '未登录百度网盘' }}</div>
+              <div class="status-title">{{ syncStore.loginStatus.email || '已登录云端' }}</div>
               <div class="status-desc">{{ syncStore.loginStatus.message }}</div>
             </div>
-            <button v-if="!syncStore.isLoggedIn" class="sync-btn login-btn" @click="handleLogin">
-              <i class="layui-icon layui-icon-login"></i>
-              登录百度网盘
-            </button>
-            <button v-else class="sync-btn logout-btn" @click="handleLogout">
+            <button class="sync-btn logout-btn" @click="handleLogout">
               <i class="layui-icon layui-icon-logout"></i>
               退出登录
             </button>
@@ -225,11 +250,11 @@
             <div class="action-row">
               <button class="action-btn upload-btn" :disabled="syncStore.isSyncing" @click="handleUpload">
                 <i class="layui-icon layui-icon-upload"></i>
-                {{ syncStore.isSyncing ? '同步中...' : '上传数据到网盘' }}
+                {{ syncStore.isSyncing ? '同步中...' : '上传数据到云端' }}
               </button>
               <button class="action-btn download-btn" :disabled="syncStore.isSyncing" @click="handleDownload">
                 <i class="layui-icon layui-icon-download"></i>
-                {{ syncStore.isSyncing ? '同步中...' : '从网盘下载数据' }}
+                {{ syncStore.isSyncing ? '同步中...' : '从云端下载数据' }}
               </button>
             </div>
 
@@ -271,18 +296,13 @@
 
             <div class="sync-tips">
               <i class="layui-icon layui-icon-tips"></i>
-              <span>提示：登录百度网盘后，开启自动同步可在手机和电脑之间实时共享数据（待办事项、日记、笔记等）。数据将安全存储在您的百度网盘中。</span>
+              <span>提示：登录云端后，开启自动同步可在手机和电脑之间实时共享数据（待办事项、日记、笔记等）。数据将安全存储在云端服务器中。</span>
             </div>
 
             <div class="sync-tips small">
               <i class="layui-icon layui-icon-info"></i>
-              <span>自动同步说明：修改数据后会在5秒内自动上传到百度网盘，打开网页时会检测云端是否有更新。</span>
+              <span>自动同步说明：修改数据后会在3秒内自动上传到云端，其他设备会实时收到数据更新通知。</span>
             </div>
-          </div>
-
-          <div v-else class="sync-tips">
-            <i class="layui-icon layui-icon-tips"></i>
-            <span>提示：登录百度网盘后即可实现跨设备数据同步，让您的手机和电脑共享同一套数据。</span>
           </div>
         </div>
       </div>
@@ -329,7 +349,6 @@
 import { ref, reactive, computed, onMounted } from 'vue'
 import { useAppStore } from '@/stores/modules/app'
 import { useSyncStore } from '@/stores/modules/sync'
-import { baiduCloud } from '@/utils/baiduCloud'
 import { dataManager } from '@/utils/dataManager'
 import { layer } from '@layui/layui-vue'
 
@@ -337,6 +356,14 @@ const appStore = useAppStore()
 const syncStore = useSyncStore()
 
 const currentTheme = ref(appStore.currentTheme)
+const isRegisterMode = ref(false)
+const isLoggingIn = ref(false)
+const loginError = ref('')
+
+const loginForm = reactive({
+  email: '',
+  password: ''
+})
 
 const colors = reactive({
   primary: appStore.primary,
@@ -406,14 +433,42 @@ const resetSettings = () => {
   layer.msg('已恢复默认设置', { icon: 6 })
 }
 
-const handleLogin = () => {
-  const authUrl = baiduCloud.getAuthorizationUrl()
-  window.open(authUrl, '_blank', 'width=600,height=500')
+const toggleRegisterMode = () => {
+  isRegisterMode.value = !isRegisterMode.value
+  loginError.value = ''
 }
 
-const handleLogout = () => {
-  if (confirm('确定要退出百度网盘登录吗？')) {
-    syncStore.logout()
+const handleSubmit = async () => {
+  if (!loginForm.email || !loginForm.password) {
+    loginError.value = '请填写邮箱和密码'
+    return
+  }
+
+  isLoggingIn.value = true
+  loginError.value = ''
+
+  try {
+    const result = isRegisterMode.value
+      ? await syncStore.register(loginForm.email, loginForm.password)
+      : await syncStore.login(loginForm.email, loginForm.password)
+
+    if (result.success) {
+      layer.msg(isRegisterMode.value ? '注册成功' : '登录成功', { icon: 1 })
+      loginForm.email = ''
+      loginForm.password = ''
+    } else {
+      loginError.value = result.message || (isRegisterMode.value ? '注册失败' : '登录失败')
+    }
+  } catch (error) {
+    loginError.value = error.message
+  } finally {
+    isLoggingIn.value = false
+  }
+}
+
+const handleLogout = async () => {
+  if (confirm('确定要退出登录吗？')) {
+    await syncStore.logout()
     layer.msg('已退出登录', { icon: 1 })
   }
 }
@@ -425,7 +480,7 @@ const toggleAutoSync = () => {
 }
 
 const handleUpload = async () => {
-  if (confirm('确定要上传当前数据到百度网盘吗？这将覆盖网盘中的现有数据。')) {
+  if (confirm('确定要上传当前数据到云端吗？这将覆盖云端中的现有数据。')) {
     const result = await syncStore.uploadData()
     if (result.success) {
       layer.msg(result.message, { icon: 1 })
@@ -436,7 +491,7 @@ const handleUpload = async () => {
 }
 
 const handleDownload = async () => {
-  if (confirm('确定要从百度网盘下载数据吗？这将覆盖当前本地数据。')) {
+  if (confirm('确定要从云端下载数据吗？这将覆盖当前本地数据。')) {
     const result = await syncStore.downloadData()
     if (result.success) {
       layer.msg(result.message, { icon: 1 })
@@ -484,18 +539,7 @@ const importData = (event) => {
 }
 
 onMounted(() => {
-  const hash = window.location.hash
-  const codeMatch = hash.match(/code=([^&]+)/)
-  if (codeMatch && codeMatch[1]) {
-    syncStore.handleOAuthCallback(codeMatch[1]).then(result => {
-      if (result.success) {
-        layer.msg(result.message, { icon: 1 })
-        window.location.hash = '#/system-settings'
-      } else {
-        layer.msg(result.message, { icon: 5 })
-      }
-    })
-  }
+  syncStore.updateLoginStatus()
 })
 </script>
 
@@ -1199,6 +1243,112 @@ onMounted(() => {
 .switch-status {
   font-size: 13px;
   color: var(--text-muted, #94a3b8);
+}
+
+.login-form {
+  padding: 20px;
+  background: var(--surface-tint, #f8fafc);
+  border-radius: 12px;
+  margin-bottom: 20px;
+}
+
+.form-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-primary, #334155);
+  margin-bottom: 20px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--surface-tint, #e2e8f0);
+}
+
+.form-title i {
+  font-size: 18px;
+  color: var(--primary-color, #1e4d7b);
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.form-group label {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-secondary, #475569);
+}
+
+.form-group input {
+  height: 42px;
+  padding: 0 14px;
+  border: 1px solid var(--surface-tint, #e2e8f0);
+  border-radius: 10px;
+  font-size: 14px;
+  transition: all 0.2s ease;
+}
+
+.form-group input:focus {
+  border-color: var(--primary-color, #1e4d7b);
+  outline: none;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary-color, #1e4d7b) 8%, transparent);
+}
+
+.form-group input::placeholder {
+  color: var(--text-muted, #94a3b8);
+}
+
+.form-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.submit-btn {
+  background: linear-gradient(135deg, var(--primary-color, #1e4d7b) 0%, var(--primary-light, #3d7ab5) 100%);
+  color: #fff;
+  width: 100%;
+  justify-content: center;
+}
+
+.submit-btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px color-mix(in srgb, var(--primary-color, #1e4d7b) 30%, transparent);
+}
+
+.submit-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.switch-btn {
+  background: #fff;
+  border: 1px solid var(--surface-tint, #e2e8f0);
+  color: var(--text-secondary, #475569);
+  width: 100%;
+  justify-content: center;
+  padding: 10px 24px;
+}
+
+.switch-btn:hover {
+  border-color: var(--primary-color, #1e4d7b);
+  color: var(--primary-color, #1e4d7b);
+}
+
+.login-error {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  background: color-mix(in srgb, var(--danger-color, #ef4444) 10%, transparent);
+  border-radius: 8px;
+  margin-top: 16px;
+  font-size: 13px;
+  color: var(--danger-color, #ef4444);
 }
 
 .backup-section {

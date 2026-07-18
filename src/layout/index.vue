@@ -3,7 +3,7 @@
     <div class="sidebar" :class="{ collapsed: sidebarCollapsed }" :style="sidebarStyle">
       <div class="sidebar-logo">
         <i class="layui-icon layui-icon-home"></i>
-        <span v-show="!sidebarCollapsed">个人工作管理</span>
+        <span v-show="!sidebarCollapsed">个人学习管理</span>
       </div>
       <div class="sidebar-user" v-show="!sidebarCollapsed">
         <div class="user-avatar">
@@ -40,6 +40,18 @@
       </button>
     </div>
 
+    <div class="mobile-header" v-show="isMobile">
+      <div class="mobile-header-content">
+        <div class="mobile-logo">
+          <i class="layui-icon layui-icon-home"></i>
+          <span>个人学习管理</span>
+        </div>
+        <button class="mobile-logout" @click="showLogoutConfirm = true">
+          <i class="layui-icon layui-icon-logout"></i>
+        </button>
+      </div>
+    </div>
+
     <div v-if="showLogoutConfirm" class="confirm-modal" @click.self="showLogoutConfirm = false">
       <div class="confirm-dialog">
         <div class="confirm-header">
@@ -60,7 +72,7 @@
     </div>
 
     <div class="main-content">
-      <div class="header-bar">
+      <div class="header-bar" v-show="!isMobile">
         <div class="header-left">
           <div class="breadcrumb">
             <span v-for="(item, index) in breadcrumbs" :key="index" class="breadcrumb-item">
@@ -75,6 +87,14 @@
       </div>
       <div class="page-content">
         <router-view />
+      </div>
+    </div>
+
+    <div class="mobile-nav" v-show="isMobile">
+      <div v-for="menu in mobileMenus" :key="menu.path" class="mobile-nav-item"
+        :class="{ active: currentPath === menu.path }" @click="navigateTo(menu.path)">
+        <i :class="menu.icon" class="mobile-nav-icon"></i>
+        <span class="mobile-nav-text">{{ menu.title }}</span>
       </div>
     </div>
   </div>
@@ -95,28 +115,19 @@ const appStore = useAppStore()
 const currentPath = computed(() => route.path)
 const showLogoutConfirm = ref(false)
 const sidebarCollapsed = ref(false)
+const isMobile = ref(false)
 
-const updateTime = () => {
-  const now = new Date()
-  const year = now.getFullYear()
-  const month = String(now.getMonth() + 1).padStart(2, '0')
-  const day = String(now.getDate()).padStart(2, '0')
-  const hour = String(now.getHours()).padStart(2, '0')
-  const minute = String(now.getMinutes()).padStart(2, '0')
-  const second = String(now.getSeconds()).padStart(2, '0')
+const checkMobile = () => {
+  isMobile.value = window.innerWidth < 768
 }
 
-let timer = null
-
 onMounted(() => {
-  updateTime()
-  timer = setInterval(updateTime, 1000)
+  checkMobile()
+  window.addEventListener('resize', checkMobile)
 })
 
 onUnmounted(() => {
-  if (timer) {
-    clearInterval(timer)
-  }
+  window.removeEventListener('resize', checkMobile)
 })
 
 const breadcrumbs = computed(() => {
@@ -162,6 +173,7 @@ const allMenus = computed(() => {
     { path: '/schedule', title: '日程管理', icon: 'layui-icon layui-icon-date' },
     { path: '/diary', title: '日记', icon: 'layui-icon layui-icon-file' },
     { path: '/notes', title: '笔记本', icon: 'layui-icon layui-icon-read' },
+    { path: '/errorbook', title: '错题本', icon: 'layui-icon layui-icon-note' },
     { path: '/bookmarks', title: '网站导航', icon: 'layui-icon layui-icon-link' },
     { path: '/pomodoro', title: '番茄钟', icon: 'layui-icon layui-icon-time' },
   ]
@@ -177,6 +189,14 @@ const allMenus = computed(() => {
 
   return baseMenus
 })
+
+const mobileMenus = computed(() => [
+  { path: '/', title: '首页', icon: 'layui-icon layui-icon-home' },
+  { path: '/todo', title: '待办', icon: 'layui-icon layui-icon-list' },
+  { path: '/errorbook', title: '错题本', icon: 'layui-icon layui-icon-note' },
+  { path: '/schedule', title: '日程', icon: 'layui-icon layui-icon-date' },
+  { path: '/notes', title: '笔记', icon: 'layui-icon layui-icon-read' },
+])
 
 const navigateTo = (path) => {
   router.push(path)
@@ -625,5 +645,129 @@ const confirmLogout = () => {
 .confirm-btn:hover {
   transform: translateY(-2px);
   box-shadow: 0 6px 16px color-mix(in srgb, var(--primary-color, #1e4d7b) 30%, transparent);
+}
+
+.mobile-header {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 100;
+  background: #fff;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+  padding-top: env(safe-area-inset-top);
+}
+
+.mobile-header-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+}
+
+.mobile-logo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 16px;
+  font-weight: 600;
+  color: #1e4d7b;
+}
+
+.mobile-logo i {
+  font-size: 20px;
+}
+
+.mobile-logout {
+  background: none;
+  border: none;
+  color: #ef4444;
+  font-size: 20px;
+  padding: 8px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.mobile-nav {
+  display: none;
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 100;
+  background: #fff;
+  box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.05);
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  padding: 10px 0;
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+.mobile-nav-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 16px;
+  color: #94a3b8;
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.mobile-nav-item.active {
+  color: #1e4d7b;
+}
+
+.mobile-nav-icon {
+  font-size: 20px;
+}
+
+.mobile-nav-text {
+  font-size: 11px;
+  font-weight: 500;
+}
+
+@media (max-width: 768px) {
+  .sidebar {
+    display: none;
+  }
+
+  .header-bar {
+    display: none;
+  }
+
+  .mobile-header {
+    display: block;
+  }
+
+  .mobile-nav {
+    display: flex;
+  }
+
+  .page-content {
+    padding: 16px;
+    padding-top: calc(56px + env(safe-area-inset-top));
+    padding-bottom: calc(60px + env(safe-area-inset-bottom));
+  }
+
+  .confirm-dialog {
+    width: 90%;
+    max-width: 320px;
+  }
+
+  .app-layout {
+    height: 100vh;
+    height: 100dvh;
+  }
+}
+
+@media (min-width: 769px) {
+
+  .mobile-header,
+  .mobile-nav {
+    display: none !important;
+  }
 }
 </style>

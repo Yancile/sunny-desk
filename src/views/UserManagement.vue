@@ -241,14 +241,14 @@ const visiblePages = computed(() => {
 
 const fetchUsers = () => {
   let allUsers = dataManager.users.getAll()
-
+  
   if (searchUsername.value) {
     allUsers = allUsers.filter(u => u.username.includes(searchUsername.value))
   }
   if (userTypeFilter.value) {
     allUsers = allUsers.filter(u => u.role === userTypeFilter.value)
   }
-
+  
   total.value = allUsers.length
   const start = (currentPage.value - 1) * pageSize.value
   const end = start + pageSize.value

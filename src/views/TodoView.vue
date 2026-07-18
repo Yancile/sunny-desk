@@ -32,7 +32,7 @@
         <div class="quadrant-header">
           <span class="quadrant-title">重要而不紧急</span>
           <span class="quadrant-count">({{getQuadrantTasks(false, true).filter(t => t.status !== 'completed').length
-            }}/{{ getQuadrantTasks(false, true).length }})</span>
+          }}/{{ getQuadrantTasks(false, true).length }})</span>
           <div class="hide-completed">
             <button class="hide-btn" @click="toggleHideCompleted('important-not-urgent')">
               {{ hideCompleted['important-not-urgent'] ? '显示完成' : '隐藏完成' }}
@@ -85,7 +85,7 @@
         <div class="quadrant-header">
           <span class="quadrant-title">重要而紧急</span>
           <span class="quadrant-count">({{getQuadrantTasks(true, true).filter(t => t.status !== 'completed').length
-            }}/{{ getQuadrantTasks(true, true).length }})</span>
+          }}/{{ getQuadrantTasks(true, true).length }})</span>
           <div class="hide-completed">
             <button class="hide-btn" @click="toggleHideCompleted('important-urgent')">
               {{ hideCompleted['important-urgent'] ? '显示完成' : '隐藏完成' }}
@@ -137,7 +137,7 @@
         <div class="quadrant-header">
           <span class="quadrant-title">不重要而不紧急</span>
           <span class="quadrant-count">({{getQuadrantTasks(false, false).filter(t => t.status !== 'completed').length
-            }}/{{ getQuadrantTasks(false, false).length }})</span>
+          }}/{{ getQuadrantTasks(false, false).length }})</span>
           <div class="hide-completed">
             <button class="hide-btn" @click="toggleHideCompleted('not-important-not-urgent')">
               {{ hideCompleted['not-important-not-urgent'] ? '显示完成' : '隐藏完成' }}
@@ -190,7 +190,7 @@
         <div class="quadrant-header">
           <span class="quadrant-title">不重要而紧急</span>
           <span class="quadrant-count">({{getQuadrantTasks(true, false).filter(t => t.status !== 'completed').length
-            }}/{{ getQuadrantTasks(true, false).length }})</span>
+          }}/{{ getQuadrantTasks(true, false).length }})</span>
           <div class="hide-completed">
             <button class="hide-btn" @click="toggleHideCompleted('not-important-urgent')">
               {{ hideCompleted['not-important-urgent'] ? '显示完成' : '隐藏完成' }}

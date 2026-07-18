@@ -288,7 +288,17 @@ const defaultData = {
   lastSyncTime: null,
   lastModifiedTime: Date.now(),
   version: '1.0.0',
-  syncVersion: 1
+  syncVersion: 1,
+  errorbook: [],
+  subjectBooks: [
+    { id: 1, name: '数学', icon: '📐', color: '#3b82f6', count: 0 },
+    { id: 2, name: '英语', icon: '📚', color: '#e69cf2ff', count: 0 },
+    { id: 3, name: '数据结构', icon: '⚛️', color: '#f59e0b', count: 0 },
+    { id: 4, name: '组成原理', icon: '🧪', color: '#2695dfff', count: 0 },
+    { id: 5, name: '操作系统', icon: '📖', color: '#e14545ff', count: 0 },
+    { id: 6, name: '计算机网络', icon: '📖', color: '#44ef7dff', count: 0 }
+  ],
+  errorbookTags: []
 }
 
 let appData = null
@@ -347,6 +357,34 @@ const validateData = () => {
       }
       if (!todo.status) {
         todo.status = 'pending'
+        needsSave = true
+      }
+    })
+  }
+  if (appData.errorbook) {
+    appData.errorbook.forEach(error => {
+      if (!error.tags) {
+        error.tags = []
+        needsSave = true
+      }
+      if (!error.sourceImages) {
+        error.sourceImages = []
+        needsSave = true
+      }
+      if (!error.stickingImages) {
+        error.stickingImages = []
+        needsSave = true
+      }
+      if (!error.similarQuestions) {
+        error.similarQuestions = []
+        needsSave = true
+      }
+      if (!error.status) {
+        error.status = 'pending'
+        needsSave = true
+      }
+      if (!error.reviewCount) {
+        error.reviewCount = 0
         needsSave = true
       }
     })
@@ -1028,6 +1066,286 @@ const syncModule = {
   }
 }
 
+const errorbookModule = {
+  getAll: () => {
+    return [...getData().errorbook].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+  },
+  getById: (id) => {
+    return getData().errorbook.find(e => String(e.id) === String(id))
+  },
+  getBySubject: (subject) => {
+    return getData().errorbook.filter(e => e.subject === subject).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+  },
+  add: (errorbook) => {
+    const newErrorbook = {
+      ...errorbook,
+      id: generateId(),
+      status: errorbook.status || 'pending',
+      reviewCount: 0,
+      lastReviewDate: null,
+      createdAt: new Date().toLocaleDateString('zh-CN'),
+      tags: errorbook.tags || [],
+      images: errorbook.images || []
+    }
+    getData().errorbook.push(newErrorbook)
+    subjectBookModule.updateCount(newErrorbook.subject)
+    saveData()
+    return newErrorbook
+  },
+  update: (errorbook) => {
+    const index = getData().errorbook.findIndex(e => String(e.id) === String(errorbook.id))
+    if (index !== -1) {
+      const oldSubject = getData().errorbook[index].subject
+      getData().errorbook[index] = { ...getData().errorbook[index], ...errorbook }
+      if (oldSubject !== errorbook.subject) {
+        subjectBookModule.updateCount(oldSubject)
+        subjectBookModule.updateCount(errorbook.subject)
+      }
+      saveData()
+      return getData().errorbook[index]
+    }
+    return null
+  },
+  delete: (id) => {
+    const index = getData().errorbook.findIndex(e => String(e.id) === String(id))
+    if (index !== -1) {
+      const subject = getData().errorbook[index].subject
+      getData().errorbook.splice(index, 1)
+      subjectBookModule.updateCount(subject)
+      saveData()
+      return true
+    }
+    return false
+  },
+  updateStatus: (id, status) => {
+    const errorbook = getData().errorbook.find(e => String(e.id) === String(id))
+    if (errorbook) {
+      errorbook.status = status
+      errorbook.reviewCount = (errorbook.reviewCount || 0) + 1
+      errorbook.lastReviewDate = new Date().toLocaleDateString('zh-CN')
+      saveData()
+      return true
+    }
+    return false
+  },
+  addTag: (id, tag) => {
+    const errorbook = getData().errorbook.find(e => String(e.id) === String(id))
+    if (errorbook) {
+      if (!errorbook.tags) errorbook.tags = []
+      if (!errorbook.tags.includes(tag)) {
+        errorbook.tags.push(tag)
+        saveData()
+      }
+      return true
+    }
+    return false
+  },
+  removeTag: (id, tag) => {
+    const errorbook = getData().errorbook.find(e => String(e.id) === String(id))
+    if (errorbook && errorbook.tags) {
+      const tagIndex = errorbook.tags.indexOf(tag)
+      if (tagIndex !== -1) {
+        errorbook.tags.splice(tagIndex, 1)
+        saveData()
+        return true
+      }
+    }
+    return false
+  },
+  getStats: () => {
+    const items = getData().errorbook
+    const total = items.length
+    const pending = items.filter(e => e.status === 'pending').length
+    const mastered = items.filter(e => e.status === 'mastered').length
+    const retry = items.filter(e => e.status === 'retry').length
+
+    const subjectStats = {}
+    items.forEach(e => {
+      if (!subjectStats[e.subject]) {
+        subjectStats[e.subject] = 0
+      }
+      subjectStats[e.subject]++
+    })
+
+    const stickingTypeStats = {}
+    items.forEach(e => {
+      if (!stickingTypeStats[e.stickingType]) {
+        stickingTypeStats[e.stickingType] = 0
+      }
+      stickingTypeStats[e.stickingType]++
+    })
+
+    return {
+      total,
+      pending,
+      mastered,
+      retry,
+      subjectStats,
+      stickingTypeStats
+    }
+  },
+  getSubjects: () => {
+    const items = getData().errorbook
+    const subjects = [...new Set(items.map(e => e.subject))]
+    return subjects
+  },
+  getStickingTypes: () => {
+    const items = getData().errorbook
+    const types = [...new Set(items.map(e => e.stickingType))]
+    return types
+  },
+  getSourceNames: () => {
+    const items = getData().errorbook
+    const names = [...new Set(items.map(e => e.sourceName))]
+    return names
+  },
+  getAllTags: () => {
+    const items = getData().errorbook
+    const allTags = []
+    items.forEach(e => {
+      if (e.tags) {
+        e.tags.forEach(tag => {
+          if (!allTags.includes(tag)) {
+            allTags.push(tag)
+          }
+        })
+      }
+    })
+    return allTags
+  },
+  getAllSourceTypes: () => {
+    const items = getData().errorbook
+    const allTypes = []
+    items.forEach(e => {
+      if (e.sourceType) {
+        const types = Array.isArray(e.sourceType) ? e.sourceType : [e.sourceType]
+        types.forEach(type => {
+          if (!allTypes.includes(type)) {
+            allTypes.push(type)
+          }
+        })
+      }
+    })
+    return allTypes
+  },
+  filter: (params) => {
+    let items = getData().errorbook.slice()
+    if (params.subject) {
+      items = items.filter(e => e.subject === params.subject)
+    }
+    if (params.status) {
+      items = items.filter(e => e.status === params.status)
+    }
+    if (params.stickingType) {
+      items = items.filter(e => e.stickingType === params.stickingType)
+    }
+    if (params.sourceType) {
+      items = items.filter(e => {
+        const types = Array.isArray(e.sourceType) ? e.sourceType : [e.sourceType]
+        return types.includes(params.sourceType)
+      })
+    }
+    if (params.searchSource) {
+      const search = params.searchSource.toLowerCase()
+      items = items.filter(e => {
+        if (e.chapter && e.chapter.toLowerCase().includes(search)) return true
+        if (e.problemId && e.problemId.toLowerCase().includes(search)) return true
+        const types = Array.isArray(e.sourceType) ? e.sourceType : [e.sourceType]
+        return types.some(type => type.toLowerCase().includes(search))
+      })
+    }
+    return items.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+  }
+}
+
+const subjectBookModule = {
+  getAll: () => {
+    return [...getData().subjectBooks]
+  },
+  getById: (id) => {
+    return getData().subjectBooks.find(s => String(s.id) === String(id))
+  },
+  getByName: (name) => {
+    return getData().subjectBooks.find(s => s.name === name)
+  },
+  add: (subject) => {
+    const newSubject = {
+      ...subject,
+      id: generateId(),
+      count: 0
+    }
+    getData().subjectBooks.push(newSubject)
+    saveData()
+    return newSubject
+  },
+  update: (subject) => {
+    const index = getData().subjectBooks.findIndex(s => String(s.id) === String(subject.id))
+    if (index !== -1) {
+      getData().subjectBooks[index] = { ...getData().subjectBooks[index], ...subject }
+      saveData()
+      return getData().subjectBooks[index]
+    }
+    return null
+  },
+  delete: (id) => {
+    const index = getData().subjectBooks.findIndex(s => String(s.id) === String(id))
+    if (index !== -1) {
+      getData().subjectBooks.splice(index, 1)
+      saveData()
+      return true
+    }
+    return false
+  },
+  updateCount: (subjectName) => {
+    const subject = getData().subjectBooks.find(s => s.name === subjectName)
+    if (subject) {
+      const count = getData().errorbook.filter(e => e.subject === subjectName).length
+      subject.count = count
+      saveData()
+    }
+  },
+  refreshAllCounts: () => {
+    getData().subjectBooks.forEach(s => {
+      s.count = getData().errorbook.filter(e => e.subject === s.name).length
+    })
+    saveData()
+  }
+}
+
+const errorbookTagModule = {
+  getAll: () => {
+    return [...getData().errorbookTags]
+  },
+  add: (tag) => {
+    const newTag = {
+      ...tag,
+      id: generateId(),
+      createdAt: new Date().toLocaleDateString('zh-CN')
+    }
+    getData().errorbookTags.push(newTag)
+    saveData()
+    return newTag
+  },
+  delete: (id) => {
+    const index = getData().errorbookTags.findIndex(t => String(t.id) === String(id))
+    if (index !== -1) {
+      getData().errorbookTags.splice(index, 1)
+      saveData()
+      return true
+    }
+    return false
+  },
+  update: (tag) => {
+    const index = getData().errorbookTags.findIndex(t => String(t.id) === String(tag.id))
+    if (index !== -1) {
+      getData().errorbookTags[index] = { ...getData().errorbookTags[index], ...tag }
+      saveData()
+      return getData().errorbookTags[index]
+    }
+    return null
+  }
+}
+
 loadData()
 
 export const dataManager = {
@@ -1049,5 +1367,8 @@ export const dataManager = {
   memos: memoModule,
   habits: habitModule,
   schedules: scheduleModule,
-  sync: syncModule
+  sync: syncModule,
+  errorbook: errorbookModule,
+  subjectBooks: subjectBookModule,
+  errorbookTags: errorbookTagModule
 }

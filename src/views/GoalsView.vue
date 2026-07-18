@@ -159,7 +159,7 @@
             </select>
             <span v-else class="goal-category-badge" :class="selectedGoal?.category">{{
               getCategoryText(selectedGoal?.category)
-            }}</span>
+              }}</span>
             <input v-if="isEditing" v-model="editForm.title" class="title-input" />
             <span v-else class="modal-title">{{ selectedGoal?.title }}</span>
           </div>

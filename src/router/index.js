@@ -56,6 +56,12 @@ const routes = [
         meta: { title: '笔记本', requiresAuth: true, breadcrumb: '笔记本' },
       },
       {
+        path: 'errorbook',
+        name: 'errorbook',
+        component: () => import('@/views/errorbook/ErrorbookView.vue'),
+        meta: { title: '错题本', requiresAuth: true, breadcrumb: '错题本' },
+      },
+      {
         path: 'bookmarks',
         name: 'bookmarks',
         component: () => import('@/views/BookmarksView.vue'),

@@ -135,7 +135,7 @@
                     <input type="text" v-model="formData.weather" placeholder="如：晴、多云、小雨" class="form-input" />
                     <div class="weather-suggestions">
                       <span v-for="w in weatherOptions" :key="w" class="weather-tag" @click="formData.weather = w">{{ w
-                        }}</span>
+                      }}</span>
                     </div>
                   </div>
                 </div>

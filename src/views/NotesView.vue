@@ -136,7 +136,7 @@
             </div>
             <div class="editor-actions">
               <span class="update-time">更新于 {{ formatDateTime(selectedNote.updatedAt || selectedNote.createdAt)
-              }}</span>
+                }}</span>
               <button class="save-btn" @click="saveCurrentNote">
                 <i class="layui-icon layui-icon-save"></i> 保存
               </button>
