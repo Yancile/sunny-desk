@@ -33,8 +33,8 @@
       <div class="login-right">
         <div class="right-content">
           <div class="login-header">
-            <h2 class="login-title">欢迎登录</h2>
-            <p class="login-subtitle">请输入您的账号信息</p>
+            <h2 class="login-title">{{ isRegisterMode ? '注册账户' : '欢迎登录' }}</h2>
+            <p class="login-subtitle">{{ isRegisterMode ? '创建您的账号，开始使用系统' : '请输入您的账号信息' }}</p>
           </div>
           <form class="login-form">
             <div class="form-item">
@@ -52,8 +52,21 @@
                   @click="showPassword = !showPassword"></i>
               </div>
             </div>
-            <button type="button" class="login-btn" :class="{ 'login-btn-loading': loading }" @click="handleLogin">
-              {{ loading ? '登录中...' : '登录' }}
+            <div v-if="isRegisterMode" class="form-item">
+              <div class="input-wrapper">
+                <i class="layui-icon layui-icon-password input-icon"></i>
+                <input :type="showConfirmPassword ? 'text' : 'password'" v-model="form.confirmPassword"
+                  placeholder="请确认密码" class="login-input" />
+                <i class="layui-icon password-toggle"
+                  :class="showConfirmPassword ? 'layui-icon-eye' : 'layui-icon-eye-off'"
+                  @click="showConfirmPassword = !showConfirmPassword"></i>
+              </div>
+            </div>
+            <button type="button" class="login-btn" :class="{ 'login-btn-loading': loading }" @click="handleSubmit">
+              {{ loading ? (isRegisterMode ? '注册中...' : '登录中...') : (isRegisterMode ? '注册' : '登录') }}
+            </button>
+            <button type="button" class="switch-btn" @click="toggleRegisterMode">
+              {{ isRegisterMode ? '已有账号？去登录' : '没有账号？去注册' }}
             </button>
           </form>
         </div>
@@ -71,19 +84,27 @@ import { layer } from '@layui/layui-vue'
 const router = useRouter()
 const userStore = useUserStore()
 
+const isRegisterMode = ref(false)
 const form = reactive({
   username: '',
   password: '',
+  confirmPassword: '',
 })
 
 const loading = ref(false)
 const showPassword = ref(false)
+const showConfirmPassword = ref(false)
 
 onMounted(() => {
   if (userStore.isLoggedIn) {
     router.push('/')
   }
 })
+
+const toggleRegisterMode = () => {
+  isRegisterMode.value = !isRegisterMode.value
+  form.confirmPassword = ''
+}
 
 const handleLogin = async () => {
   if (!form.username) {
@@ -108,6 +129,51 @@ const handleLogin = async () => {
     layer.msg('登录失败，请稍后重试', { icon: 5 })
   } finally {
     loading.value = false
+  }
+}
+
+const handleRegister = async () => {
+  if (!form.username) {
+    layer.msg('请输入用户名', { icon: 5 })
+    return
+  }
+  if (!form.password) {
+    layer.msg('请输入密码', { icon: 5 })
+    return
+  }
+  if (!form.confirmPassword) {
+    layer.msg('请确认密码', { icon: 5 })
+    return
+  }
+  if (form.password !== form.confirmPassword) {
+    layer.msg('两次输入的密码不一致', { icon: 5 })
+    return
+  }
+
+  loading.value = true
+  try {
+    const result = await userStore.register(form.username, form.password)
+    if (result.success) {
+      layer.msg(result.message, { icon: 6 })
+      isRegisterMode.value = false
+      form.username = ''
+      form.password = ''
+      form.confirmPassword = ''
+    } else {
+      layer.msg(result.message, { icon: 5 })
+    }
+  } catch (error) {
+    layer.msg('注册失败，请稍后重试', { icon: 5 })
+  } finally {
+    loading.value = false
+  }
+}
+
+const handleSubmit = () => {
+  if (isRegisterMode.value) {
+    handleRegister()
+  } else {
+    handleLogin()
   }
 }
 </script>
@@ -329,6 +395,24 @@ const handleLogin = async () => {
 .login-btn-loading {
   opacity: 0.7;
   cursor: not-allowed;
+}
+
+.switch-btn {
+  width: 100%;
+  height: 44px;
+  background: transparent;
+  border: 1px solid var(--surface-tint, #e2e8f0);
+  border-radius: 14px;
+  color: var(--text-secondary, #475569);
+  font-size: 15px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  margin-top: 4px;
+}
+
+.switch-btn:hover {
+  border-color: var(--primary-color, #1e4d7b);
+  color: var(--primary-color, #1e4d7b);
 }
 
 @media (max-width: 768px) {

@@ -1,325 +1,238 @@
 import { reactive } from 'vue'
 
-const STORAGE_KEY = 'self_manage_system_data'
+const STORAGE_KEY_PREFIX = 'self_manage_system_data'
+const USERS_STORAGE_KEY = 'self_manage_system_users'
+const CURRENT_USER_ID_KEY = 'self_manage_system_current_user_id'
 
-const defaultData = {
-  users: [
-    {
-      id: 1,
-      username: 'admin',
-      password: '$2a$10$rB8f5y9L7u6K5H3G7F2D1N9H4G3F2D1S8D7F4G2H1J6K8L7',
-      role: 'admin',
-      status: 1,
-      createTime: '2024-01-01 00:00:00'
-    },
-    {
-      id: 2,
-      username: 'teacher001',
-      password: '$2a$10$rB8f5y9L7u6K5H3G7F2D1N9H4G3F2D1S8D7F4G2H1J6K8L7',
-      role: 'teacher',
-      status: 1,
-      createTime: '2024-01-02 10:00:00'
-    },
-    {
-      id: 3,
-      username: 'student001',
-      password: '$2a$10$rB8f5y9L7u6K5H3G7F2D1N9H4G3F2D1S8D7F4G2H1J6K8L7',
-      role: 'student',
-      status: 1,
-      createTime: '2024-01-03 14:00:00'
+let currentUserId = null
+let usersData = null
+
+const setCurrentUserId = (userId) => {
+  currentUserId = userId
+  try {
+    if (userId) {
+      localStorage.setItem(CURRENT_USER_ID_KEY, userId)
+    } else {
+      localStorage.removeItem(CURRENT_USER_ID_KEY)
     }
-  ],
-  todos: [
-    {
-      id: '1',
-      title: '网页设计',
-      description: '',
-      quadrant: 'important-not-urgent',
-      status: 'completed',
-      deadline: '',
-      priority: 'medium',
-      category: 'work'
-    },
-    {
-      id: '2',
-      title: '学习vue',
-      description: '',
-      quadrant: 'important-urgent',
-      status: 'pending',
-      deadline: '',
-      priority: 'high',
-      category: 'study'
-    }
-  ],
-  diaries: [
-    { id: 1, date: '2026-07-01', mood: 'happy', weather: '晴朗', content: '今天工作效率很高，完成了重要的项目文档。晚上和家人一起吃了火锅，非常开心！', tags: ['工作', '家庭'] },
-    { id: 2, date: '2026-06-30', mood: 'calm', weather: '多云', content: '今天比较平静，按部就班地完成了日常工作。下班后阅读了半小时，感觉很放松。', tags: ['阅读'] },
-    { id: 3, date: '2026-06-29', mood: 'anxious', weather: '小雨', content: '项目进度有些紧张，明天有重要的客户会议，需要好好准备。压力有点大，但相信可以克服。', tags: ['工作', '压力'] },
-    { id: 4, date: '2026-06-28', mood: 'relaxed', weather: '晴', content: '周末和朋友去郊外徒步，呼吸新鲜空气，欣赏大自然的美景。身心都得到了放松。', tags: ['旅行', '朋友'] },
-    { id: 5, date: '2026-06-27', mood: 'tired', weather: '阴', content: '连续工作一周，今天感觉特别疲惫。早点休息，明天又是新的一天。', tags: ['休息'] },
-  ],
-  notes: [
-    { id: 1, title: '第一章概述', notebookId: 1, sectionId: 1, parentId: null, content: '# 第一章概述\n\n## 数据结构的基本概念\n\n数据结构是计算机存储、组织数据的方式。\n\n### 基本术语\n\n- 数据\n- 数据元素\n- 数据项', tags: [], createdAt: '2026-04-22T22:46', updatedAt: '2026-04-22T22:46' },
-    { id: 2, title: '数据的定义', notebookId: 1, sectionId: 1, parentId: 1, content: '# 数据的定义\n\n数据是描述客观事物的符号，是计算机中可以操作的对象。', tags: [], createdAt: '2026-04-22T22:50', updatedAt: '2026-04-22T22:50' },
-    { id: 3, title: '数据元素', notebookId: 1, sectionId: 1, parentId: 1, content: '# 数据元素\n\n数据元素是数据的基本单位，在计算机程序中通常作为一个整体进行考虑和处理。', tags: [], createdAt: '2026-04-22T22:52', updatedAt: '2026-04-22T22:52' },
-    { id: 4, title: '第二章线性表', notebookId: 1, sectionId: 2, parentId: null, content: '# 第二章线性表\n\n## 线性表的定义\n\n线性表是具有相同特性的数据元素的一个有限序列。', tags: [], createdAt: '2026-04-25T14:30', updatedAt: '2026-04-25T14:30' },
-    { id: 5, title: '线性表的顺序存储', notebookId: 1, sectionId: 2, parentId: 4, content: '# 线性表的顺序存储\n\n用一组地址连续的存储单元依次存储线性表的数据元素。', tags: [], createdAt: '2026-04-25T14:40', updatedAt: '2026-04-25T14:40' },
-    { id: 6, title: '第三章栈和队列', notebookId: 1, sectionId: 3, parentId: null, content: '# 第三章栈和队列\n\n## 栈\n\n栈是一种特殊的线性表，只能在一端进行插入和删除操作。', tags: [], createdAt: '2026-04-28T10:15', updatedAt: '2026-04-28T10:15' },
-    { id: 7, title: '计算机系统概述', notebookId: 2, sectionId: 8, parentId: null, content: '# 第一章 计算机系统概述\n\n## 冯·诺依曼结构\n\n冯·诺依曼计算机由五大部件组成。', tags: [], createdAt: '2026-05-01T09:00', updatedAt: '2026-05-01T09:00' },
-    { id: 8, title: '数据的表示和运算', notebookId: 2, sectionId: 9, parentId: null, content: '# 第二章 数据的表示和运算\n\n## 数制转换\n\n二进制、八进制、十进制、十六进制之间的转换方法。', tags: [], createdAt: '2026-05-05T16:20', updatedAt: '2026-05-05T16:20' },
-  ],
-  notebooks: [
-    { id: 1, name: '数据结构', icon: '📘', color: '#3b82f6' },
-    { id: 2, name: '组成原理', icon: '📗', color: '#10b981' },
-    { id: 3, name: '408', icon: '📕', color: '#ef4444' },
-    { id: 4, name: '英语', icon: '📙', color: '#f59e0b' },
-  ],
-  sections: [
-    { id: 1, notebookId: 1, parentId: null, name: '第一章' },
-    { id: 2, notebookId: 1, parentId: null, name: '第二章' },
-    { id: 3, notebookId: 1, parentId: null, name: '第三章' },
-    { id: 4, notebookId: 1, parentId: null, name: '第四章' },
-    { id: 5, notebookId: 1, parentId: null, name: '第五章' },
-    { id: 6, notebookId: 1, parentId: null, name: '第六章' },
-    { id: 7, notebookId: 1, parentId: null, name: '第七章' },
-    { id: 8, notebookId: 2, parentId: null, name: '第一章 计算机系统概述' },
-    { id: 9, notebookId: 2, parentId: null, name: '第二章 数据的表示和运算' },
-    { id: 10, notebookId: 2, parentId: null, name: '第三章 存储器层次结构' },
-    { id: 11, notebookId: 1, parentId: 1, name: '1.1 数据结构的基本概念' },
-    { id: 12, notebookId: 1, parentId: 1, name: '1.2 算法和算法分析' },
-    { id: 13, notebookId: 1, parentId: 2, name: '2.1 线性表的定义和特点' },
-    { id: 14, notebookId: 1, parentId: 2, name: '2.2 线性表的顺序表示' },
-    { id: 15, notebookId: 1, parentId: 11, name: '1.1.1 数据' },
-  ],
-  bookmarks: [],
-  categories: [
-    { id: 1, name: '开发工具', icon: 'layui-icon layui-icon-code' },
-    { id: 2, name: '学习资源', icon: 'layui-icon layui-icon-education' },
-    { id: 3, name: '新闻资讯', icon: 'layui-icon layui-icon-news' },
-    { id: 4, name: '社交娱乐', icon: 'layui-icon layui-icon-face-smile' },
-    { id: 5, name: '常用工具', icon: 'layui-icon layui-icon-tool' },
-  ],
-  goals: [
-    {
-      id: 1,
-      title: '完成年度学习计划',
-      description: '掌握Vue3、TypeScript等前端技术，提升专业能力',
-      category: 'study',
-      deadline: '2026-12-31',
-      progress: 45,
-      milestones: [
-        { title: 'Vue3基础学习', date: '2026-03-31', completed: true },
-        { title: 'TypeScript进阶', date: '2026-06-30', completed: true },
-        { title: '项目实战', date: '2026-09-30', completed: false },
-        { title: '技术总结', date: '2026-12-31', completed: false }
-      ]
-    },
-    {
-      id: 2,
-      title: '健身目标 - 减脂塑形',
-      description: '通过规律运动和健康饮食，达到理想体型',
-      category: 'fitness',
-      deadline: '2026-09-30',
-      progress: 30,
-      milestones: [
-        { title: '减重5kg', date: '2026-05-31', completed: true },
-        { title: '减重10kg', date: '2026-07-31', completed: false },
-        { title: '体脂率达标', date: '2026-09-30', completed: false }
-      ]
-    },
-    {
-      id: 3,
-      title: '阅读20本书',
-      description: '涵盖技术、管理、文学等多个领域',
-      category: 'life',
-      deadline: '2026-12-31',
-      progress: 25,
-      milestones: [
-        { title: '完成5本', date: '2026-03-31', completed: true },
-        { title: '完成10本', date: '2026-06-30', completed: false },
-        { title: '完成15本', date: '2026-09-30', completed: false },
-        { title: '完成20本', date: '2026-12-31', completed: false }
-      ]
-    },
-    {
-      id: 4,
-      title: '财务目标 - 存款计划',
-      description: '制定合理的储蓄计划，实现财务自由',
-      category: 'finance',
-      deadline: '2026-12-31',
-      progress: 60,
-      milestones: [
-        { title: '存满1万元', date: '2026-03-31', completed: true },
-        { title: '存满3万元', date: '2026-06-30', completed: true },
-        { title: '存满5万元', date: '2026-09-30', completed: false },
-        { title: '存满8万元', date: '2026-12-31', completed: false }
-      ]
-    },
-    {
-      id: 5,
-      title: '项目管理能力提升',
-      description: '学习项目管理方法论，提升团队协作效率',
-      category: 'work',
-      deadline: '2026-08-31',
-      progress: 75,
-      milestones: [
-        { title: 'PMP认证学习', date: '2026-04-30', completed: true },
-        { title: '项目实战应用', date: '2026-06-30', completed: true },
-        { title: '团队培训', date: '2026-08-31', completed: false }
-      ]
-    }
-  ],
-  memos: [
-    {
-      id: 1,
-      title: '会议记录',
-      content: '今天下午的项目会议讨论了Q3的工作计划，需要完成以下任务：1. 需求文档编写 2. 技术方案设计 3. 资源协调',
-      color: 'yellow',
-      pinned: true,
-      reminder: '',
-      createdAt: '2026-07-01T14:30',
-      archived: false
-    },
-    {
-      id: 2,
-      title: '购物清单',
-      content: '牛奶、面包、鸡蛋、水果、蔬菜',
-      color: 'green',
-      pinned: false,
-      reminder: '2026-07-02T18:00',
-      createdAt: '2026-07-01T10:00',
-      archived: false
-    },
-    {
-      id: 3,
-      title: '学习笔记',
-      content: 'Vue3 Composition API的核心概念：ref、reactive、computed、watch、生命周期钩子',
-      color: 'blue',
-      pinned: false,
-      reminder: '',
-      createdAt: '2026-06-30T20:00',
-      archived: false
-    },
-    {
-      id: 4,
-      title: '重要提醒',
-      content: '明天上午9点有客户电话会议，准备好演示材料',
-      color: 'pink',
-      pinned: true,
-      reminder: '2026-07-02T08:30',
-      createdAt: '2026-07-01T16:00',
-      archived: false
-    },
-    {
-      id: 5,
-      title: '阅读推荐',
-      content: '《深入理解计算机系统》《代码大全》《设计模式》',
-      color: 'purple',
-      pinned: false,
-      reminder: '',
-      createdAt: '2026-06-29T15:00',
-      archived: true
-    }
-  ],
-  schedules: [
-    { id: 1, title: '产品需求评审', date: '2026-07-01', time: '09:30', location: '会议室A', description: '讨论Q3产品需求', color: '#1e4d7b', repeat: 'none', completed: false },
-    { id: 2, title: '客户电话会议', date: '2026-07-01', time: '14:00', location: '线上', description: '与客户沟通项目进展', color: '#0d9488', repeat: 'none', completed: false },
-    { id: 3, title: '团队周会', date: '2026-07-02', time: '10:00', location: '会议室B', color: '#8b5cf6', repeat: 'weekly', completed: false },
-    { id: 4, title: '代码审查', date: '2026-07-03', time: '15:00', location: '线上', description: '审查团队成员提交的代码', color: '#f59e0b', repeat: 'none', completed: false },
-    { id: 5, title: '健身', date: '2026-07-04', time: '18:00', location: '健身房', color: '#ef4444', repeat: 'daily', completed: false },
-    { id: 6, title: '学习Vue3', date: '2026-07-05', time: '20:00', location: '家里', description: '学习组合式API', color: '#10b981', repeat: 'none', completed: false },
-  ],
-  habits: [
-    {
-      id: '1',
-      name: '早起',
-      icon: 'layui-icon layui-icon-sunny',
-      color: '#f59e0b',
-      streak: 15,
-      todayChecked: true,
-      checkedDays: ['2026-06-25', '2026-06-26', '2026-06-27', '2026-06-28', '2026-06-29', '2026-06-30', '2026-07-01']
-    },
-    {
-      id: '2',
-      name: '阅读',
-      icon: 'layui-icon layui-icon-book',
-      color: '#8b5cf6',
-      streak: 8,
-      todayChecked: false,
-      checkedDays: ['2026-06-24', '2026-06-25', '2026-06-26', '2026-06-27', '2026-06-28', '2026-06-29', '2026-06-30']
-    },
-    {
-      id: '3',
-      name: '运动',
-      icon: 'layui-icon layui-icon-heart',
-      color: '#ef4444',
-      streak: 5,
-      todayChecked: false,
-      checkedDays: ['2026-06-27', '2026-06-28', '2026-06-29', '2026-06-30', '2026-07-01']
-    },
-    {
-      id: '4',
-      name: '冥想',
-      icon: 'layui-icon layui-icon-face-smile',
-      color: '#10b981',
-      streak: 21,
-      todayChecked: true,
-      checkedDays: ['2026-06-11', '2026-06-12', '2026-06-13', '2026-06-14', '2026-06-15', '2026-06-16', '2026-06-17']
-    },
-    {
-      id: '5',
-      name: '写日记',
-      icon: 'layui-icon layui-icon-file',
-      color: '#3b82f6',
-      streak: 3,
-      todayChecked: false,
-      checkedDays: ['2026-06-29', '2026-06-30', '2026-07-01']
-    },
-    {
-      id: '6',
-      name: '代码练习',
-      icon: 'layui-icon layui-icon-code',
-      color: '#ec4899',
-      streak: 10,
-      todayChecked: true,
-      checkedDays: ['2026-06-22', '2026-06-23', '2026-06-24', '2026-06-25', '2026-06-26', '2026-06-27', '2026-06-28']
-    }
-  ],
-  lastSyncTime: null,
-  lastModifiedTime: Date.now(),
-  version: '1.0.0',
-  syncVersion: 1,
-  errorbook: [],
-  subjectBooks: [
-    { id: 1, name: '数学', icon: '📐', color: '#3b82f6', count: 0 },
-    { id: 2, name: '英语', icon: '📚', color: '#e69cf2ff', count: 0 },
-    { id: 3, name: '数据结构', icon: '⚛️', color: '#f59e0b', count: 0 },
-    { id: 4, name: '组成原理', icon: '🧪', color: '#2695dfff', count: 0 },
-    { id: 5, name: '操作系统', icon: '📖', color: '#10b981', count: 0 },
-    { id: 6, name: '计算机网络', icon: '🌐', color: '#ec4899', count: 0 }
-  ],
-  errorbookTags: [],
-  errorbookConfig: {
-    sourceTypes: ['书本', '试卷', '作业', '课堂笔记', '练习册', '其他'],
-    stickingTypes: ['概念不清', '方法不当', '计算错误', '审题偏差', '其他']
+  } catch (error) {
+    console.error('保存当前用户ID失败:', error)
   }
 }
 
-let appData = null
+const restoreCurrentUserId = () => {
+  try {
+    const stored = localStorage.getItem(CURRENT_USER_ID_KEY)
+    if (stored) {
+      currentUserId = stored
+    }
+  } catch (error) {
+    console.error('恢复当前用户ID失败:', error)
+  }
+}
+
+const defaultUsers = [
+  {
+    id: '1',
+    username: 'admin',
+    password: '$2a$10$rB8f5y9L7u6K5H3G7F2D1N9H4G3F2D1S8D7F4G2H1J6K8L7',
+    role: 'admin',
+    status: 1,
+    createTime: '2024-01-01 00:00:00'
+  },
+  {
+    id: '2',
+    username: 'teacher001',
+    password: '$2a$10$rB8f5y9L7u6K5H3G7F2D1N9H4G3F2D1S8D7F4G2H1J6K8L7',
+    role: 'teacher',
+    status: 1,
+    createTime: '2024-01-02 10:00:00'
+  },
+  {
+    id: '3',
+    username: 'student001',
+    password: '$2a$10$rB8f5y9L7u6K5H3G7F2D1N9H4G3F2D1S8D7F4G2H1J6K8L7',
+    role: 'user',
+    status: 1,
+    createTime: '2024-01-03 14:00:00'
+  },
+  {
+    id: '4',
+    username: 'student002',
+    password: '$2a$10$rB8f5y9L7u6K5H3G7F2D1N9H4G3F2D1S8D7F4G2H1J6K8L7',
+    role: 'user',
+    status: 1,
+    createTime: '2024-01-04 16:00:00'
+  }
+]
+
+const loadUsers = () => {
+  try {
+    const stored = localStorage.getItem(USERS_STORAGE_KEY)
+    if (stored) {
+      usersData = JSON.parse(stored)
+    } else {
+      usersData = JSON.parse(JSON.stringify(defaultUsers))
+      saveUsers()
+    }
+  } catch (error) {
+    console.error('加载用户数据失败:', error)
+    usersData = JSON.parse(JSON.stringify(defaultUsers))
+    saveUsers()
+  }
+  return usersData
+}
+
+const saveUsers = () => {
+  try {
+    localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(usersData))
+  } catch (error) {
+    console.error('保存用户数据失败:', error)
+  }
+}
+
+restoreCurrentUserId()
+loadUsers()
+
+const getStorageKey = () => {
+  if (currentUserId) {
+    return `${STORAGE_KEY_PREFIX}_${currentUserId}`
+  }
+  return STORAGE_KEY_PREFIX
+}
+
+const defaultData = {
+  todos: [
+    { id: '1', title: '完成项目报告', description: '撰写项目总结报告', status: 'pending', priority: 'high', dueDate: '', createdAt: Date.now(), completedAt: null, category: '工作', tags: ['工作', '报告'] },
+    { id: '2', title: '学习 Vue 3', description: '学习 Vue 3 Composition API', status: 'pending', priority: 'medium', dueDate: '', createdAt: Date.now(), completedAt: null, category: '学习', tags: ['学习', 'Vue'] },
+    { id: '3', title: '阅读技术书籍', description: '阅读《深入浅出 Node.js》', status: 'completed', priority: 'low', dueDate: '', createdAt: Date.now(), completedAt: Date.now(), category: '阅读', tags: ['阅读', '技术'] }
+  ],
+  diaries: [
+    { id: '1', date: new Date().toISOString().split('T')[0], content: '今天完成了项目的核心功能开发，感觉收获很大。', mood: 'happy', weather: 'sunny', createdAt: Date.now() }
+  ],
+  notes: [
+    { id: '1', title: '技术笔记', content: '# Vue 3 笔记\n\n## Composition API\n\n- ref() - 响应式引用\n- reactive() - 响应式对象\n- computed() - 计算属性', createdAt: Date.now(), updatedAt: Date.now(), notebookId: '1', sectionId: '1' },
+    { id: '2', title: '会议记录', content: '# 项目会议\n\n## 讨论内容\n\n1. 需求分析\n2. 技术方案\n3. 时间安排', createdAt: Date.now(), updatedAt: Date.now(), notebookId: '1', sectionId: '2' }
+  ],
+  notebooks: [
+    { id: '1', name: '工作笔记', description: '工作相关的笔记', createdAt: Date.now(), updatedAt: Date.now() },
+    { id: '2', name: '学习笔记', description: '学习相关的笔记', createdAt: Date.now(), updatedAt: Date.now() }
+  ],
+  sections: [
+    { id: '1', name: '技术文档', notebookId: '1', createdAt: Date.now() },
+    { id: '2', name: '会议记录', notebookId: '1', createdAt: Date.now() },
+    { id: '3', name: 'Vue 学习', notebookId: '2', createdAt: Date.now() }
+  ],
+  bookmarks: [
+    { id: '1', name: 'Vue 官方文档', url: 'https://vuejs.org/', description: 'Vue.js 官方文档', category: '技术', tags: ['Vue', '前端'], createdAt: Date.now() },
+    { id: '2', name: 'GitHub', url: 'https://github.com/', description: '代码托管平台', category: '工具', tags: ['Git', '代码'], createdAt: Date.now() }
+  ],
+  categories: [
+    { id: '1', name: '工作', color: '#3b82f6' },
+    { id: '2', name: '学习', color: '#10b981' },
+    { id: '3', name: '生活', color: '#f59e0b' },
+    { id: '4', name: '阅读', color: '#8b5cf6' },
+    { id: '5', name: '技术', color: '#ef4444' },
+    { id: '6', name: '工具', color: '#6366f1' }
+  ],
+  goals: [
+    { id: '1', title: '掌握 Vue 3', description: '熟练掌握 Vue 3 及其生态系统', targetDate: '', progress: 60, status: 'in_progress', createdAt: Date.now(), category: '学习', subGoals: [{ id: '1-1', title: '学习 Composition API', completed: true }, { id: '1-2', title: '学习 Pinia', completed: true }, { id: '1-3', title: '学习 Vue Router', completed: false }] },
+    { id: '2', title: '每天运动', description: '每天坚持运动30分钟', targetDate: '', progress: 40, status: 'in_progress', createdAt: Date.now(), category: '生活', subGoals: [{ id: '2-1', title: '跑步', completed: true }, { id: '2-2', title: '健身', completed: false }] }
+  ],
+  memos: [
+    { id: '1', content: '记得备份数据', color: 'yellow', createdAt: Date.now() },
+    { id: '2', content: '明天开会', color: 'blue', createdAt: Date.now() }
+  ],
+  habits: [
+    { id: '1', name: '早起', description: '每天7点前起床', frequency: 'daily', targetDays: 7, currentStreak: 3, completedDates: [new Date(Date.now() - 86400000).toISOString().split('T')[0], new Date(Date.now() - 172800000).toISOString().split('T')[0], new Date().toISOString().split('T')[0]], createdAt: Date.now(), icon: 'sun' },
+    { id: '2', name: '阅读', description: '每天阅读30分钟', frequency: 'daily', targetDays: 7, currentStreak: 5, completedDates: [], createdAt: Date.now(), icon: 'book' },
+    { id: '3', name: '健身', description: '每周健身3次', frequency: 'weekly', targetDays: 3, currentStreak: 2, completedDates: [], createdAt: Date.now(), icon: 'dumbbell' }
+  ],
+  schedules: [
+    { id: '1', title: '项目会议', description: '项目进度讨论', startTime: '09:00', endTime: '10:00', date: new Date().toISOString().split('T')[0], location: '会议室A', recurring: 'none', createdAt: Date.now() },
+    { id: '2', title: '代码审查', description: '审查团队代码', startTime: '14:00', endTime: '16:00', date: new Date().toISOString().split('T')[0], location: '线上会议', recurring: 'none', createdAt: Date.now() }
+  ],
+  pomodoros: {
+    workDuration: 25,
+    breakDuration: 5,
+    longBreakDuration: 15,
+    sessionsBeforeLongBreak: 4,
+    todaySessions: 0,
+    totalSessions: 120
+  },
+  statistics: {
+    todosCompleted: 156,
+    diariesWritten: 42,
+    notesCreated: 89,
+    hoursStudied: 120,
+    weeklyData: [
+      { day: '周一', todos: 5, studyTime: 2 },
+      { day: '周二', todos: 3, studyTime: 3 },
+      { day: '周三', todos: 7, studyTime: 1 },
+      { day: '周四', todos: 4, studyTime: 2.5 },
+      { day: '周五', todos: 6, studyTime: 1.5 },
+      { day: '周六', todos: 2, studyTime: 4 },
+      { day: '周日', todos: 3, studyTime: 3 }
+    ],
+    monthlyData: [
+      { month: '1月', todos: 45, studyTime: 30 },
+      { month: '2月', todos: 38, studyTime: 25 },
+      { month: '3月', todos: 52, studyTime: 35 },
+      { month: '4月', todos: 48, studyTime: 32 },
+      { month: '5月', todos: 55, studyTime: 38 },
+      { month: '6月', todos: 42, studyTime: 28 }
+    ],
+    categoryStats: [
+      { name: '工作', count: 65, color: '#3b82f6' },
+      { name: '学习', count: 45, color: '#10b981' },
+      { name: '生活', count: 30, color: '#f59e0b' },
+      { name: '阅读', count: 25, color: '#8b5cf6' }
+    ],
+    goalProgress: [
+      { name: '掌握 Vue 3', progress: 60, color: '#8b5cf6' },
+      { name: '每天运动', progress: 40, color: '#10b981' },
+      { name: '阅读计划', progress: 75, color: '#f59e0b' }
+    ]
+  },
+  userProfile: {
+    name: '',
+    avatar: '',
+    email: '',
+    phone: '',
+    bio: '',
+    settings: {
+      theme: 'light',
+      language: 'zh-CN',
+      timezone: 'Asia/Shanghai',
+      notification: true,
+      dailyReminder: true,
+      reminderTime: '09:00'
+    }
+  },
+  lastModifiedTime: Date.now(),
+  syncVersion: 1,
+  users: []
+}
+
+let appData = reactive(JSON.parse(JSON.stringify(defaultData)))
 
 const loadData = () => {
   try {
-    const stored = localStorage.getItem(STORAGE_KEY)
+    const stored = localStorage.getItem(getStorageKey())
     if (stored) {
-      appData = reactive(JSON.parse(stored))
+      const parsed = JSON.parse(stored)
+      const defaultCopy = JSON.parse(JSON.stringify(defaultData))
+      appData = reactive({ ...defaultCopy, ...parsed })
       validateData()
     } else {
-      appData = reactive(JSON.parse(JSON.stringify(defaultData)))
+      const defaultCopy = JSON.parse(JSON.stringify(defaultData))
+      appData = reactive(defaultCopy)
       saveData()
     }
   } catch (error) {
     console.error('加载数据失败:', error)
-    appData = reactive(JSON.parse(JSON.stringify(defaultData)))
+    const defaultCopy = JSON.parse(JSON.stringify(defaultData))
+    appData = reactive(defaultCopy)
     saveData()
   }
   return appData
@@ -327,90 +240,50 @@ const loadData = () => {
 
 const validateData = () => {
   const defaults = defaultData
-  let needsSave = false
-  Object.keys(defaults).forEach(key => {
-    if (appData[key] === undefined || appData[key] === null || (Array.isArray(appData[key]) && appData[key].length === 0)) {
-      appData[key] = JSON.parse(JSON.stringify(defaults[key]))
-      needsSave = true
+  const modules = ['todos', 'diaries', 'notes', 'goals', 'memos', 'notebooks', 'sections', 'habits', 'schedules', 'bookmarks', 'categories']
+
+  modules.forEach(module => {
+    if (!appData[module]) {
+      appData[module] = JSON.parse(JSON.stringify(defaults[module]))
     }
   })
-  const modules = ['users', 'todos', 'diaries', 'notes', 'goals', 'memos', 'notebooks', 'sections', 'habits', 'schedules', 'bookmarks', 'categories']
-  modules.forEach(moduleName => {
-    if (appData[moduleName]) {
-      appData[moduleName].forEach(item => {
-        if (typeof item.id !== 'string') {
-          item.id = String(item.id)
-          needsSave = true
-        }
-        if (item.notebookId && typeof item.notebookId !== 'string') {
-          item.notebookId = String(item.notebookId)
-          needsSave = true
-        }
-        if (item.sectionId && typeof item.sectionId !== 'string') {
-          item.sectionId = String(item.sectionId)
-          needsSave = true
-        }
-      })
-    }
-  })
-  if (appData.todos) {
-    appData.todos.forEach(todo => {
-      if (!todo.quadrant) {
-        todo.quadrant = 'important-not-urgent'
-        needsSave = true
-      }
-      if (!todo.status) {
-        todo.status = 'pending'
-        needsSave = true
-      }
-    })
+
+  if (!appData.userProfile) {
+    appData.userProfile = JSON.parse(JSON.stringify(defaults.userProfile))
   }
-  if (appData.errorbook) {
-    appData.errorbook.forEach(error => {
-      if (!error.tags) {
-        error.tags = []
-        needsSave = true
-      }
-      if (!error.sourceImages) {
-        error.sourceImages = []
-        needsSave = true
-      }
-      if (!error.stickingImages) {
-        error.stickingImages = []
-        needsSave = true
-      }
-      if (!error.similarQuestions) {
-        error.similarQuestions = []
-        needsSave = true
-      }
-      if (!error.status) {
-        error.status = 'pending'
-        needsSave = true
-      }
-      if (!error.reviewCount) {
-        error.reviewCount = 0
-        needsSave = true
-      }
-    })
+
+  if (!appData.pomodoros) {
+    appData.pomodoros = JSON.parse(JSON.stringify(defaults.pomodoros))
   }
-  if (needsSave) {
-    saveData()
+
+  if (!appData.statistics) {
+    appData.statistics = JSON.parse(JSON.stringify(defaults.statistics))
+  }
+
+  if (!appData.lastModifiedTime) {
+    appData.lastModifiedTime = Date.now()
+  }
+
+  if (!appData.syncVersion) {
+    appData.syncVersion = 1
   }
 }
-
-let onDataChangedCallback = null
 
 const setOnDataChangedCallback = (callback) => {
   onDataChangedCallback = callback
 }
 
+let onDataChangedCallback = null
+
 const saveData = () => {
   try {
-    if (appData) {
-      appData.lastModifiedTime = Date.now()
-      appData.syncVersion = (appData.syncVersion || 1) + 1
+    if (!appData) {
+      console.error('保存数据失败: appData 为空')
+      return
     }
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(appData))
+    appData.lastModifiedTime = Date.now()
+    appData.syncVersion = (appData.syncVersion || 1) + 1
+    localStorage.setItem(getStorageKey(), JSON.stringify(appData))
     if (onDataChangedCallback) {
       onDataChangedCallback()
     }
@@ -433,8 +306,10 @@ const exportData = () => {
 const importData = (dataString) => {
   try {
     const data = JSON.parse(dataString)
-    if (data.users && data.todos && data.diaries) {
-      appData = data
+    if (data.todos && data.diaries) {
+      const importDataCopy = { ...data }
+      delete importDataCopy.users
+      appData = reactive(importDataCopy)
       saveData()
       return true
     }
@@ -449,131 +324,81 @@ const generateId = () => {
   return Date.now() + Math.random().toString(36).substr(2, 9)
 }
 
+const getUsers = () => {
+  if (!usersData) {
+    loadUsers()
+  }
+  return usersData
+}
+
+const updateUsers = (newUsers) => {
+  usersData = newUsers
+  saveUsers()
+}
+
 const userModule = {
   getAll: () => {
-    return getData().users.slice().reverse()
+    return getUsers().slice().reverse()
   },
   getById: (id) => {
-    return getData().users.find(u => String(u.id) === String(id))
+    return getUsers().find(u => String(u.id) === String(id))
   },
   getByUsername: (username) => {
-    return getData().users.find(u => u.username === username)
+    return getUsers().find(u => u.username === username)
   },
   add: (user) => {
     const newUser = {
       ...user,
       id: generateId(),
+      status: 1,
       createTime: new Date().toLocaleString('zh-CN')
     }
-    getData().users.push(newUser)
-    saveData()
+    const users = getUsers()
+    users.push(newUser)
+    updateUsers(users)
     return newUser
   },
   update: (user) => {
-    const index = getData().users.findIndex(u => String(u.id) === String(user.id))
+    const users = getUsers()
+    const index = users.findIndex(u => String(u.id) === String(user.id))
     if (index !== -1) {
-      getData().users[index] = { ...getData().users[index], ...user }
-      saveData()
-      return getData().users[index]
+      users[index] = { ...users[index], ...user, updateTime: new Date().toLocaleString('zh-CN') }
+      updateUsers(users)
+      return users[index]
     }
     return null
   },
   delete: (id) => {
-    const index = getData().users.findIndex(u => String(u.id) === String(id))
-    if (index !== -1) {
-      getData().users.splice(index, 1)
-      saveData()
-      return true
-    }
-    return false
-  },
-  updateStatus: (id, status) => {
-    const user = getData().users.find(u => String(u.id) === String(id))
-    if (user) {
-      user.status = status
-      saveData()
-      return true
-    }
-    return false
+    const users = getUsers().filter(u => String(u.id) !== String(id))
+    updateUsers(users)
   },
   validateLogin: (username, password) => {
-    const user = getData().users.find(u => u.username === username && u.status === 1)
-    if (!user) return null
-
-    if (password === 'admin123' && username === 'admin') {
+    const bcrypt = require('bcryptjs')
+    const user = getUsers().find(u => u.username === username && u.status === 1)
+    if (user && bcrypt.compareSync(password, user.password)) {
       return user
     }
-
-    const bcrypt = window.bcrypt || null
-    if (bcrypt) {
-      try {
-        if (bcrypt.compareSync(password, user.password)) {
-          return user
-        }
-      } catch (e) {
-        console.error('密码验证失败:', e)
-      }
-    }
-
-    if (password === '123456') {
-      return user
-    }
-
     return null
   },
-  getStatistics: () => {
-    const users = getData().users
-    return {
-      total: users.length,
-      adminCount: users.filter(u => u.role === 'admin').length,
-      teacherCount: users.filter(u => u.role === 'teacher').length,
-      studentCount: users.filter(u => u.role === 'student').length,
-      active: users.filter(u => u.status === 1).length,
-      inactive: users.filter(u => u.status === 0).length
-    }
-  },
-  updateProfile: (userId, data) => {
-    const index = getData().users.findIndex(u => u.id === userId)
-    if (index !== -1) {
-      getData().users[index] = { ...getData().users[index], ...data }
-      saveData()
-      return true
-    }
-    return false
-  },
   changePassword: (userId, oldPassword, newPassword) => {
-    const user = getData().users.find(u => u.id === userId)
-    if (!user) return { success: false, message: '用户不存在' }
-
-    if (oldPassword === 'admin123' && user.username === 'admin') {
-      user.password = newPassword
-      saveData()
-      return { success: true, message: '密码修改成功' }
-    }
-
-    if (oldPassword === '123456') {
-      user.password = newPassword
-      saveData()
-      return { success: true, message: '密码修改成功' }
-    }
-
-    const bcrypt = window.bcrypt || null
-    if (bcrypt) {
+    const bcrypt = require('bcryptjs')
+    const users = getUsers()
+    const user = users.find(u => String(u.id) === String(userId))
+    if (user) {
       try {
         if (bcrypt.compareSync(oldPassword, user.password)) {
           user.password = bcrypt.hashSync(newPassword, 10)
-          saveData()
+          updateUsers(users)
           return { success: true, message: '密码修改成功' }
         }
       } catch (e) {
         console.error('密码验证失败:', e)
       }
     }
-
     return { success: false, message: '旧密码不正确' }
   },
   search: (params) => {
-    let users = getData().users.slice().reverse()
+    let users = getUsers().slice().reverse()
     if (params.username) {
       users = users.filter(u => u.username.includes(params.username))
     }
@@ -611,44 +436,27 @@ const todoModule = {
     const index = getData().todos.findIndex(t => String(t.id) === String(todo.id))
     if (index !== -1) {
       getData().todos[index] = { ...getData().todos[index], ...todo }
+      if (todo.status === 'completed' && !getData().todos[index].completedAt) {
+        getData().todos[index].completedAt = Date.now()
+      } else if (todo.status !== 'completed') {
+        getData().todos[index].completedAt = null
+      }
       saveData()
       return getData().todos[index]
     }
     return null
   },
   delete: (id) => {
-    const index = getData().todos.findIndex(t => String(t.id) === String(id))
-    if (index !== -1) {
-      getData().todos.splice(index, 1)
-      saveData()
-      return true
-    }
-    return false
+    getData().todos = getData().todos.filter(t => String(t.id) !== String(id))
+    saveData()
   },
-  updateStatus: (id, status) => {
-    const todo = getData().todos.find(t => String(t.id) === String(id))
-    if (todo) {
-      todo.status = status
-      saveData()
-      return true
-    }
-    return false
-  },
-  toggleStatus: (id) => {
+  toggle: (id) => {
     const todo = getData().todos.find(t => String(t.id) === String(id))
     if (todo) {
       todo.status = todo.status === 'completed' ? 'pending' : 'completed'
+      todo.completedAt = todo.status === 'completed' ? Date.now() : null
       saveData()
-      return todo.status
     }
-    return null
-  },
-  clearAll: () => {
-    getData().todos = []
-    saveData()
-  },
-  getByQuadrant: (quadrant) => {
-    return getData().todos.filter(t => t.quadrant === quadrant)
   }
 }
 
@@ -665,7 +473,8 @@ const diaryModule = {
   add: (diary) => {
     const newDiary = {
       ...diary,
-      id: generateId()
+      id: generateId(),
+      createdAt: Date.now()
     }
     getData().diaries.push(newDiary)
     saveData()
@@ -681,32 +490,27 @@ const diaryModule = {
     return null
   },
   delete: (id) => {
-    const index = getData().diaries.findIndex(d => String(d.id) === String(id))
-    if (index !== -1) {
-      getData().diaries.splice(index, 1)
-      saveData()
-      return true
-    }
-    return false
-  },
-  hasDiary: (date) => {
-    return getData().diaries.some(d => d.date === date)
+    getData().diaries = getData().diaries.filter(d => String(d.id) !== String(id))
+    saveData()
   }
 }
 
 const noteModule = {
   getAll: () => {
-    return [...getData().notes].sort((a, b) => new Date(b.createTime) - new Date(a.createTime))
+    return [...getData().notes].sort((a, b) => b.updatedAt - a.updatedAt)
   },
   getById: (id) => {
     return getData().notes.find(n => String(n.id) === String(id))
+  },
+  getByNotebook: (notebookId) => {
+    return getData().notes.filter(n => String(n.notebookId) === String(notebookId))
   },
   add: (note) => {
     const newNote = {
       ...note,
       id: generateId(),
-      createTime: new Date().toLocaleString('zh-CN'),
-      updateTime: new Date().toLocaleString('zh-CN')
+      createdAt: Date.now(),
+      updatedAt: Date.now()
     }
     getData().notes.push(newNote)
     saveData()
@@ -715,39 +519,33 @@ const noteModule = {
   update: (note) => {
     const index = getData().notes.findIndex(n => String(n.id) === String(note.id))
     if (index !== -1) {
-      getData().notes[index] = {
-        ...getData().notes[index],
-        ...note,
-        updateTime: new Date().toLocaleString('zh-CN')
-      }
+      getData().notes[index] = { ...getData().notes[index], ...note, updatedAt: Date.now() }
       saveData()
       return getData().notes[index]
     }
     return null
   },
   delete: (id) => {
-    const index = getData().notes.findIndex(n => String(n.id) === String(id))
-    if (index !== -1) {
-      getData().notes.splice(index, 1)
-      saveData()
-      return true
-    }
-    return false
+    getData().notes = getData().notes.filter(n => String(n.id) !== String(id))
+    saveData()
   }
 }
 
 const bookmarkModule = {
   getAll: () => {
-    return getData().bookmarks.slice().reverse()
+    return [...getData().bookmarks].sort((a, b) => b.createdAt - a.createdAt)
   },
   getById: (id) => {
     return getData().bookmarks.find(b => String(b.id) === String(id))
+  },
+  getByCategory: (category) => {
+    return getData().bookmarks.filter(b => b.category === category)
   },
   add: (bookmark) => {
     const newBookmark = {
       ...bookmark,
       id: generateId(),
-      createTime: new Date().toLocaleString('zh-CN')
+      createdAt: Date.now()
     }
     getData().bookmarks.push(newBookmark)
     saveData()
@@ -763,23 +561,14 @@ const bookmarkModule = {
     return null
   },
   delete: (id) => {
-    const index = getData().bookmarks.findIndex(b => String(b.id) === String(id))
-    if (index !== -1) {
-      getData().bookmarks.splice(index, 1)
-      saveData()
-      return true
-    }
-    return false
-  },
-  saveAll: (bookmarks) => {
-    getData().bookmarks = bookmarks
+    getData().bookmarks = getData().bookmarks.filter(b => String(b.id) !== String(id))
     saveData()
   }
 }
 
 const categoryModule = {
   getAll: () => {
-    return getData().categories.slice().reverse()
+    return [...getData().categories]
   },
   getById: (id) => {
     return getData().categories.find(c => String(c.id) === String(id))
@@ -787,8 +576,7 @@ const categoryModule = {
   add: (category) => {
     const newCategory = {
       ...category,
-      id: generateId(),
-      icon: category.icon || 'layui-icon layui-icon-link'
+      id: generateId()
     }
     getData().categories.push(newCategory)
     saveData()
@@ -804,23 +592,14 @@ const categoryModule = {
     return null
   },
   delete: (id) => {
-    const index = getData().categories.findIndex(c => String(c.id) === String(id))
-    if (index !== -1) {
-      getData().categories.splice(index, 1)
-      saveData()
-      return true
-    }
-    return false
-  },
-  saveAll: (categories) => {
-    getData().categories = categories
+    getData().categories = getData().categories.filter(c => String(c.id) !== String(id))
     saveData()
   }
 }
 
 const goalModule = {
   getAll: () => {
-    return [...getData().goals].sort((a, b) => new Date(b.deadline) - new Date(a.deadline))
+    return [...getData().goals]
   },
   getById: (id) => {
     return getData().goals.find(g => String(g.id) === String(id))
@@ -829,8 +608,9 @@ const goalModule = {
     const newGoal = {
       ...goal,
       id: generateId(),
-      status: 'pending',
-      createTime: new Date().toLocaleString('zh-CN')
+      progress: 0,
+      status: 'in_progress',
+      createdAt: Date.now()
     }
     getData().goals.push(newGoal)
     saveData()
@@ -846,28 +626,27 @@ const goalModule = {
     return null
   },
   delete: (id) => {
-    const index = getData().goals.findIndex(g => String(g.id) === String(id))
-    if (index !== -1) {
-      getData().goals.splice(index, 1)
-      saveData()
-      return true
-    }
-    return false
+    getData().goals = getData().goals.filter(g => String(g.id) !== String(id))
+    saveData()
   },
-  updateStatus: (id, status) => {
-    const goal = getData().goals.find(g => String(g.id) === String(id))
-    if (goal) {
-      goal.status = status
-      saveData()
-      return true
+  toggleSubGoal: (goalId, subGoalId) => {
+    const goal = getData().goals.find(g => String(g.id) === String(goalId))
+    if (goal && goal.subGoals) {
+      const subGoal = goal.subGoals.find(sg => String(sg.id) === String(subGoalId))
+      if (subGoal) {
+        subGoal.completed = !subGoal.completed
+        const completedCount = goal.subGoals.filter(sg => sg.completed).length
+        goal.progress = goal.subGoals.length > 0 ? Math.round((completedCount / goal.subGoals.length) * 100) : 0
+        goal.status = goal.progress === 100 ? 'completed' : 'in_progress'
+        saveData()
+      }
     }
-    return false
   }
 }
 
 const memoModule = {
   getAll: () => {
-    return getData().memos.slice().reverse()
+    return [...getData().memos].sort((a, b) => b.createdAt - a.createdAt)
   },
   getById: (id) => {
     return getData().memos.find(m => String(m.id) === String(id))
@@ -876,7 +655,7 @@ const memoModule = {
     const newMemo = {
       ...memo,
       id: generateId(),
-      createTime: new Date().toLocaleString('zh-CN')
+      createdAt: Date.now()
     }
     getData().memos.push(newMemo)
     saveData()
@@ -892,19 +671,14 @@ const memoModule = {
     return null
   },
   delete: (id) => {
-    const index = getData().memos.findIndex(m => String(m.id) === String(id))
-    if (index !== -1) {
-      getData().memos.splice(index, 1)
-      saveData()
-      return true
-    }
-    return false
+    getData().memos = getData().memos.filter(m => String(m.id) !== String(id))
+    saveData()
   }
 }
 
 const notebookModule = {
   getAll: () => {
-    return getData().notebooks.slice().reverse()
+    return [...getData().notebooks].sort((a, b) => b.updatedAt - a.updatedAt)
   },
   getById: (id) => {
     return getData().notebooks.find(n => String(n.id) === String(id))
@@ -912,7 +686,9 @@ const notebookModule = {
   add: (notebook) => {
     const newNotebook = {
       ...notebook,
-      id: generateId()
+      id: generateId(),
+      createdAt: Date.now(),
+      updatedAt: Date.now()
     }
     getData().notebooks.push(newNotebook)
     saveData()
@@ -921,26 +697,23 @@ const notebookModule = {
   update: (notebook) => {
     const index = getData().notebooks.findIndex(n => String(n.id) === String(notebook.id))
     if (index !== -1) {
-      getData().notebooks[index] = { ...getData().notebooks[index], ...notebook }
+      getData().notebooks[index] = { ...getData().notebooks[index], ...notebook, updatedAt: Date.now() }
       saveData()
       return getData().notebooks[index]
     }
     return null
   },
   delete: (id) => {
-    const index = getData().notebooks.findIndex(n => String(n.id) === String(id))
-    if (index !== -1) {
-      getData().notebooks.splice(index, 1)
-      saveData()
-      return true
-    }
-    return false
+    getData().notebooks = getData().notebooks.filter(n => String(n.id) !== String(id))
+    getData().notes = getData().notes.filter(n => String(n.notebookId) !== String(id))
+    getData().sections = getData().sections.filter(s => String(s.notebookId) !== String(id))
+    saveData()
   }
 }
 
 const sectionModule = {
   getAll: () => {
-    return getData().sections.slice().reverse()
+    return [...getData().sections]
   },
   getById: (id) => {
     return getData().sections.find(s => String(s.id) === String(id))
@@ -951,7 +724,8 @@ const sectionModule = {
   add: (section) => {
     const newSection = {
       ...section,
-      id: generateId()
+      id: generateId(),
+      createdAt: Date.now()
     }
     getData().sections.push(newSection)
     saveData()
@@ -967,19 +741,15 @@ const sectionModule = {
     return null
   },
   delete: (id) => {
-    const index = getData().sections.findIndex(s => String(s.id) === String(id))
-    if (index !== -1) {
-      getData().sections.splice(index, 1)
-      saveData()
-      return true
-    }
-    return false
+    getData().sections = getData().sections.filter(s => String(s.id) !== String(id))
+    getData().notes = getData().notes.filter(n => String(n.sectionId) !== String(id))
+    saveData()
   }
 }
 
 const habitModule = {
   getAll: () => {
-    return getData().habits.slice().reverse()
+    return [...getData().habits]
   },
   getById: (id) => {
     return getData().habits.find(h => String(h.id) === String(id))
@@ -988,9 +758,9 @@ const habitModule = {
     const newHabit = {
       ...habit,
       id: generateId(),
-      streak: 0,
-      todayChecked: false,
-      checkedDays: []
+      currentStreak: 0,
+      completedDates: [],
+      createdAt: Date.now()
     }
     getData().habits.push(newHabit)
     saveData()
@@ -1006,11 +776,29 @@ const habitModule = {
     return null
   },
   delete: (id) => {
-    const index = getData().habits.findIndex(h => String(h.id) === String(id))
-    if (index !== -1) {
-      getData().habits.splice(index, 1)
+    getData().habits = getData().habits.filter(h => String(h.id) !== String(id))
+    saveData()
+  },
+  toggleToday: (id) => {
+    const habit = getData().habits.find(h => String(h.id) === String(id))
+    if (habit) {
+      const today = new Date().toISOString().split('T')[0]
+      const dateIndex = habit.completedDates.indexOf(today)
+      if (dateIndex === -1) {
+        habit.completedDates.push(today)
+        habit.currentStreak++
+      } else {
+        habit.completedDates.splice(dateIndex, 1)
+        habit.currentStreak = Math.max(0, habit.currentStreak - 1)
+      }
       saveData()
-      return true
+    }
+  },
+  isCompletedToday: (id) => {
+    const habit = getData().habits.find(h => String(h.id) === String(id))
+    if (habit) {
+      const today = new Date().toISOString().split('T')[0]
+      return habit.completedDates.includes(today)
     }
     return false
   }
@@ -1019,19 +807,21 @@ const habitModule = {
 const scheduleModule = {
   getAll: () => {
     return [...getData().schedules].sort((a, b) => {
-      const dateA = new Date(`${a.date}T${a.time || '00:00'}`)
-      const dateB = new Date(`${b.date}T${b.time || '00:00'}`)
-      return dateA - dateB
+      if (a.date !== b.date) return new Date(a.date) - new Date(b.date)
+      return a.startTime.localeCompare(b.startTime)
     })
   },
   getById: (id) => {
     return getData().schedules.find(s => String(s.id) === String(id))
   },
+  getByDate: (date) => {
+    return getData().schedules.filter(s => s.date === date)
+  },
   add: (schedule) => {
     const newSchedule = {
       ...schedule,
       id: generateId(),
-      createTime: new Date().toLocaleString('zh-CN')
+      createdAt: Date.now()
     }
     getData().schedules.push(newSchedule)
     saveData()
@@ -1047,242 +837,104 @@ const scheduleModule = {
     return null
   },
   delete: (id) => {
-    const index = getData().schedules.findIndex(s => String(s.id) === String(id))
-    if (index !== -1) {
-      getData().schedules.splice(index, 1)
-      saveData()
-      return true
-    }
-    return false
-  },
-  getByDate: (date) => {
-    return getData().schedules.filter(s => s.date === date)
+    getData().schedules = getData().schedules.filter(s => String(s.id) !== String(id))
+    saveData()
   }
 }
 
 const syncModule = {
-  setLastSyncTime: (time) => {
-    getData().lastSyncTime = time
-    saveData()
+  getSyncVersion: () => {
+    return getData().syncVersion || 1
   },
-  getLastSyncTime: () => {
-    return getData().lastSyncTime
+  getLastModifiedTime: () => {
+    return getData().lastModifiedTime || Date.now()
+  },
+  incrementVersion: () => {
+    getData().syncVersion = (getData().syncVersion || 1) + 1
+    getData().lastModifiedTime = Date.now()
+    saveData()
   }
 }
 
 const errorbookModule = {
   getAll: () => {
-    return [...getData().errorbook].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+    return [...(getData().errorbook || [])].sort((a, b) => b.createdAt - a.createdAt)
   },
   getById: (id) => {
-    return getData().errorbook.find(e => String(e.id) === String(id))
+    return (getData().errorbook || []).find(e => String(e.id) === String(id))
   },
-  getBySubject: (subject) => {
-    return getData().errorbook.filter(e => e.subject === subject).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
-  },
-  add: (errorbook) => {
-    const newErrorbook = {
-      ...errorbook,
-      id: generateId(),
-      status: errorbook.status || 'pending',
-      reviewCount: 0,
-      lastReviewDate: null,
-      createdAt: new Date().toLocaleDateString('zh-CN'),
-      tags: errorbook.tags || [],
-      images: errorbook.images || []
+  add: (error) => {
+    if (!getData().errorbook) {
+      getData().errorbook = []
     }
-    getData().errorbook.push(newErrorbook)
-    subjectBookModule.updateCount(newErrorbook.subject)
+    const newError = {
+      ...error,
+      id: generateId(),
+      createdAt: Date.now(),
+      reviewed: false,
+      reviewCount: 0
+    }
+    getData().errorbook.push(newError)
     saveData()
-    return newErrorbook
+    return newError
   },
-  update: (errorbook) => {
-    const index = getData().errorbook.findIndex(e => String(e.id) === String(errorbook.id))
+  update: (error) => {
+    if (!getData().errorbook) return null
+    const index = getData().errorbook.findIndex(e => String(e.id) === String(error.id))
     if (index !== -1) {
-      const oldSubject = getData().errorbook[index].subject
-      getData().errorbook[index] = { ...getData().errorbook[index], ...errorbook }
-      if (oldSubject !== errorbook.subject) {
-        subjectBookModule.updateCount(oldSubject)
-        subjectBookModule.updateCount(errorbook.subject)
-      }
+      getData().errorbook[index] = { ...getData().errorbook[index], ...error }
       saveData()
       return getData().errorbook[index]
     }
     return null
   },
   delete: (id) => {
-    const index = getData().errorbook.findIndex(e => String(e.id) === String(id))
-    if (index !== -1) {
-      const subject = getData().errorbook[index].subject
-      getData().errorbook.splice(index, 1)
-      subjectBookModule.updateCount(subject)
+    if (getData().errorbook) {
+      getData().errorbook = getData().errorbook.filter(e => String(e.id) !== String(id))
       saveData()
-      return true
     }
-    return false
   },
-  updateStatus: (id, status) => {
-    const errorbook = getData().errorbook.find(e => String(e.id) === String(id))
-    if (errorbook) {
-      errorbook.status = status
-      errorbook.reviewCount = (errorbook.reviewCount || 0) + 1
-      errorbook.lastReviewDate = new Date().toLocaleDateString('zh-CN')
+  review: (id) => {
+    const error = (getData().errorbook || []).find(e => String(e.id) === String(id))
+    if (error) {
+      error.reviewed = true
+      error.reviewCount = (error.reviewCount || 0) + 1
+      error.lastReviewTime = Date.now()
       saveData()
-      return true
+      return error
     }
-    return false
+    return null
   },
-  addTag: (id, tag) => {
-    const errorbook = getData().errorbook.find(e => String(e.id) === String(id))
-    if (errorbook) {
-      if (!errorbook.tags) errorbook.tags = []
-      if (!errorbook.tags.includes(tag)) {
-        errorbook.tags.push(tag)
-        saveData()
-      }
-      return true
-    }
-    return false
+  getBySubject: (subjectId) => {
+    return (getData().errorbook || []).filter(e => String(e.subjectId) === String(subjectId))
   },
-  removeTag: (id, tag) => {
-    const errorbook = getData().errorbook.find(e => String(e.id) === String(id))
-    if (errorbook && errorbook.tags) {
-      const tagIndex = errorbook.tags.indexOf(tag)
-      if (tagIndex !== -1) {
-        errorbook.tags.splice(tagIndex, 1)
-        saveData()
-        return true
-      }
-    }
-    return false
-  },
-  getStats: () => {
-    const items = getData().errorbook
-    const total = items.length
-    const pending = items.filter(e => e.status === 'pending').length
-    const mastered = items.filter(e => e.status === 'mastered').length
-    const retry = items.filter(e => e.status === 'retry').length
-
-    const subjectStats = {}
-    items.forEach(e => {
-      if (!subjectStats[e.subject]) {
-        subjectStats[e.subject] = 0
-      }
-      subjectStats[e.subject]++
-    })
-
-    const stickingTypeStats = {}
-    items.forEach(e => {
-      if (!stickingTypeStats[e.stickingType]) {
-        stickingTypeStats[e.stickingType] = 0
-      }
-      stickingTypeStats[e.stickingType]++
-    })
-
-    return {
-      total,
-      pending,
-      mastered,
-      retry,
-      subjectStats,
-      stickingTypeStats
-    }
-  },
-  getSubjects: () => {
-    const items = getData().errorbook
-    const subjects = [...new Set(items.map(e => e.subject))]
-    return subjects
-  },
-  getStickingTypes: () => {
-    const items = getData().errorbook
-    const types = [...new Set(items.map(e => e.stickingType))]
-    return types
-  },
-  getSourceNames: () => {
-    const items = getData().errorbook
-    const names = [...new Set(items.map(e => e.sourceName))]
-    return names
-  },
-  getAllTags: () => {
-    const items = getData().errorbook
-    const allTags = []
-    items.forEach(e => {
-      if (e.tags) {
-        e.tags.forEach(tag => {
-          if (!allTags.includes(tag)) {
-            allTags.push(tag)
-          }
-        })
-      }
-    })
-    return allTags
-  },
-  getAllSourceTypes: () => {
-    const items = getData().errorbook
-    const allTypes = []
-    items.forEach(e => {
-      if (e.sourceType) {
-        const types = Array.isArray(e.sourceType) ? e.sourceType : [e.sourceType]
-        types.forEach(type => {
-          if (!allTypes.includes(type)) {
-            allTypes.push(type)
-          }
-        })
-      }
-    })
-    return allTypes
-  },
-  filter: (params) => {
-    let items = getData().errorbook.slice()
-    if (params.subject) {
-      items = items.filter(e => e.subject === params.subject)
-    }
-    if (params.status) {
-      items = items.filter(e => e.status === params.status)
-    }
-    if (params.stickingType) {
-      items = items.filter(e => e.stickingType === params.stickingType)
-    }
-    if (params.sourceType) {
-      items = items.filter(e => {
-        const types = Array.isArray(e.sourceType) ? e.sourceType : [e.sourceType]
-        return types.includes(params.sourceType)
-      })
-    }
-    if (params.searchSource) {
-      const search = params.searchSource.toLowerCase()
-      items = items.filter(e => {
-        if (e.chapter && e.chapter.toLowerCase().includes(search)) return true
-        if (e.problemId && e.problemId.toLowerCase().includes(search)) return true
-        const types = Array.isArray(e.sourceType) ? e.sourceType : [e.sourceType]
-        return types.some(type => type.toLowerCase().includes(search))
-      })
-    }
-    return items.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+  getByTag: (tagId) => {
+    return (getData().errorbook || []).filter(e => (e.tags || []).includes(tagId))
   }
 }
 
 const subjectBookModule = {
   getAll: () => {
-    return [...getData().subjectBooks]
+    return [...(getData().subjectBooks || [])]
   },
   getById: (id) => {
-    return getData().subjectBooks.find(s => String(s.id) === String(id))
-  },
-  getByName: (name) => {
-    return getData().subjectBooks.find(s => s.name === name)
+    return (getData().subjectBooks || []).find(s => String(s.id) === String(id))
   },
   add: (subject) => {
+    if (!getData().subjectBooks) {
+      getData().subjectBooks = []
+    }
     const newSubject = {
       ...subject,
       id: generateId(),
-      count: 0
+      createdAt: Date.now()
     }
     getData().subjectBooks.push(newSubject)
     saveData()
     return newSubject
   },
   update: (subject) => {
+    if (!getData().subjectBooks) return null
     const index = getData().subjectBooks.findIndex(s => String(s.id) === String(subject.id))
     if (index !== -1) {
       getData().subjectBooks[index] = { ...getData().subjectBooks[index], ...subject }
@@ -1292,54 +944,35 @@ const subjectBookModule = {
     return null
   },
   delete: (id) => {
-    const index = getData().subjectBooks.findIndex(s => String(s.id) === String(id))
-    if (index !== -1) {
-      getData().subjectBooks.splice(index, 1)
-      saveData()
-      return true
-    }
-    return false
-  },
-  updateCount: (subjectName) => {
-    const subject = getData().subjectBooks.find(s => s.name === subjectName)
-    if (subject) {
-      const count = getData().errorbook.filter(e => e.subject === subjectName).length
-      subject.count = count
+    if (getData().subjectBooks) {
+      getData().subjectBooks = getData().subjectBooks.filter(s => String(s.id) !== String(id))
       saveData()
     }
-  },
-  refreshAllCounts: () => {
-    getData().subjectBooks.forEach(s => {
-      s.count = getData().errorbook.filter(e => e.subject === s.name).length
-    })
-    saveData()
   }
 }
 
 const errorbookTagModule = {
   getAll: () => {
-    return [...getData().errorbookTags]
+    return [...(getData().errorbookTags || [])]
+  },
+  getById: (id) => {
+    return (getData().errorbookTags || []).find(t => String(t.id) === String(id))
   },
   add: (tag) => {
+    if (!getData().errorbookTags) {
+      getData().errorbookTags = []
+    }
     const newTag = {
       ...tag,
       id: generateId(),
-      createdAt: new Date().toLocaleDateString('zh-CN')
+      createdAt: Date.now()
     }
     getData().errorbookTags.push(newTag)
     saveData()
     return newTag
   },
-  delete: (id) => {
-    const index = getData().errorbookTags.findIndex(t => String(t.id) === String(id))
-    if (index !== -1) {
-      getData().errorbookTags.splice(index, 1)
-      saveData()
-      return true
-    }
-    return false
-  },
   update: (tag) => {
+    if (!getData().errorbookTags) return null
     const index = getData().errorbookTags.findIndex(t => String(t.id) === String(tag.id))
     if (index !== -1) {
       getData().errorbookTags[index] = { ...getData().errorbookTags[index], ...tag }
@@ -1347,102 +980,30 @@ const errorbookTagModule = {
       return getData().errorbookTags[index]
     }
     return null
+  },
+  delete: (id) => {
+    if (getData().errorbookTags) {
+      getData().errorbookTags = getData().errorbookTags.filter(t => String(t.id) !== String(id))
+      saveData()
+    }
   }
 }
 
 const errorbookConfigModule = {
-  getConfig: () => {
-    return getData().errorbookConfig
+  get: () => {
+    return getData().errorbookConfig || {}
   },
-  getSourceTypes: () => {
-    return [...getData().errorbookConfig.sourceTypes]
+  set: (config) => {
+    getData().errorbookConfig = config
+    saveData()
   },
-  addSourceType: (type) => {
-    const types = getData().errorbookConfig.sourceTypes
-    if (!types.includes(type)) {
-      types.push(type)
-      saveData()
-      return true
-    }
-    return false
-  },
-  removeSourceType: (type) => {
-    const types = getData().errorbookConfig.sourceTypes
-    const index = types.indexOf(type)
-    if (index !== -1) {
-      types.splice(index, 1)
-      saveData()
-      return true
-    }
-    return false
-  },
-  updateSourceType: (oldType, newType) => {
-    const types = getData().errorbookConfig.sourceTypes
-    const index = types.indexOf(oldType)
-    if (index !== -1 && !types.includes(newType)) {
-      types[index] = newType
-      getData().errorbook.forEach(e => {
-        if (e.sourceType) {
-          if (Array.isArray(e.sourceType)) {
-            e.sourceType = e.sourceType.map(t => t === oldType ? newType : t)
-          } else if (e.sourceType === oldType) {
-            e.sourceType = newType
-          }
-        }
-      })
-      saveData()
-      return true
-    }
-    return false
-  },
-  getStickingTypes: () => {
-    return [...getData().errorbookConfig.stickingTypes]
-  },
-  addStickingType: (type) => {
-    const types = getData().errorbookConfig.stickingTypes
-    if (!types.includes(type)) {
-      types.push(type)
-      saveData()
-      return true
-    }
-    return false
-  },
-  removeStickingType: (type) => {
-    const types = getData().errorbookConfig.stickingTypes
-    const index = types.indexOf(type)
-    if (index !== -1) {
-      types.splice(index, 1)
-      saveData()
-      return true
-    }
-    return false
-  },
-  updateStickingType: (oldType, newType) => {
-    const types = getData().errorbookConfig.stickingTypes
-    const index = types.indexOf(oldType)
-    if (index !== -1 && !types.includes(newType)) {
-      types[index] = newType
-      getData().errorbook.forEach(e => {
-        if (e.stickingType === oldType) {
-          e.stickingType = newType
-        }
-      })
-      saveData()
-      return true
-    }
-    return false
+  update: (updates) => {
+    getData().errorbookConfig = { ...(getData().errorbookConfig || {}), ...updates }
+    saveData()
   }
 }
 
-loadData()
-
 export const dataManager = {
-  loadData,
-  saveData,
-  getData,
-  exportData,
-  importData,
-  setOnDataChangedCallback,
   users: userModule,
   todos: todoModule,
   diaries: diaryModule,
@@ -1459,5 +1020,15 @@ export const dataManager = {
   errorbook: errorbookModule,
   subjectBooks: subjectBookModule,
   errorbookTags: errorbookTagModule,
-  errorbookConfig: errorbookConfigModule
+  errorbookConfig: errorbookConfigModule,
+  getData,
+  saveData,
+  loadData,
+  exportData,
+  importData,
+  validateData,
+  setOnDataChangedCallback,
+  setCurrentUserId,
+  getStorageKey,
+  currentUserId: () => currentUserId
 }

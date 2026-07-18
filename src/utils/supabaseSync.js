@@ -32,18 +32,51 @@ const signInWithEmail = async (email, password) => {
       email,
       password
     })
-    
+
     if (error) {
+      if (error.message.includes('Email not confirmed')) {
+        return {
+          success: false,
+          message: '邮箱尚未验证，请查收注册邮件并点击验证链接',
+          needsConfirmation: true,
+          email: email
+        }
+      }
       throw new Error(error.message)
     }
-    
-    if (data.session) {
+
+    if (data && data.session) {
       saveSession(data.session)
     }
-    
+
     return { success: true, data }
   } catch (error) {
     console.error('登录失败:', error)
+    return { success: false, message: error.message }
+  }
+}
+
+const resendConfirmationEmail = async (email) => {
+  try {
+    const { error } = await supabase.auth.resend({
+      type: 'signup',
+      email
+    })
+
+    if (error) {
+      if (error.message.includes('rate limit exceeded')) {
+        return {
+          success: false,
+          message: '邮件发送过于频繁，请稍后再试',
+          rateLimitExceeded: true
+        }
+      }
+      throw new Error(error.message)
+    }
+
+    return { success: true, message: '验证邮件已重新发送，请查收' }
+  } catch (error) {
+    console.error('发送验证邮件失败:', error)
     return { success: false, message: error.message }
   }
 }
@@ -52,18 +85,36 @@ const signUpWithEmail = async (email, password) => {
   try {
     const { data, error } = await supabase.auth.signUp({
       email,
-      password
+      password,
+      options: {
+        emailRedirectTo: window.location.origin
+      }
     })
-    
+
     if (error) {
+      if (error.message.includes('rate limit exceeded')) {
+        return {
+          success: false,
+          message: '邮件发送过于频繁，请稍后再试',
+          rateLimitExceeded: true
+        }
+      }
       throw new Error(error.message)
     }
-    
+
     if (data.session) {
       saveSession(data.session)
+      return { success: true, message: '注册成功', data }
+    } else if (data.user) {
+      return {
+        success: true,
+        message: '注册成功，请查收邮箱并点击验证链接完成注册',
+        data,
+        needsConfirmation: true
+      }
     }
-    
-    return { success: true, data }
+
+    return { success: true, message: '注册成功', data }
   } catch (error) {
     console.error('注册失败:', error)
     return { success: false, message: error.message }
@@ -85,42 +136,49 @@ const signOut = async () => {
 }
 
 const getCurrentUser = () => {
-  const { data: { user } } = supabase.auth.getUser()
-  return user
+  const savedSession = getSavedSession()
+  if (savedSession && savedSession.user) {
+    return savedSession.user
+  }
+  return null
 }
 
 const isLoggedIn = () => {
-  const { data: { session } } = supabase.auth.getSession()
-  return !!session
+  const savedSession = getSavedSession()
+  if (!savedSession) {
+    return false
+  }
+  const expiresAt = savedSession.expires_at * 1000
+  return expiresAt > Date.now()
 }
 
 const getLoginStatus = () => {
-  const { data: { session } } = supabase.auth.getSession()
-  if (!session) {
+  const savedSession = getSavedSession()
+  if (!savedSession) {
     return { loggedIn: false, message: '未登录' }
   }
-  
-  const expiresAt = session.expires_at * 1000
+
+  const expiresAt = savedSession.expires_at * 1000
   const remainingTime = Math.floor((expiresAt - Date.now()) / (1000 * 60))
-  
+
   return {
-    loggedIn: true,
+    loggedIn: expiresAt > Date.now(),
     message: remainingTime > 0 ? `已登录，剩余 ${remainingTime} 分钟` : '登录已过期',
-    email: session.user.email
+    email: savedSession.user?.email
   }
 }
 
 const uploadData = async (dataString) => {
   try {
-    const { data: { user } } = await supabase.auth.getUser()
+    const user = getCurrentUser()
     if (!user) {
       throw new Error('用户未登录')
     }
-    
+
     const data = JSON.parse(dataString)
     const syncVersion = data.syncVersion || 1
     const lastModified = data.lastModifiedTime || Date.now()
-    
+
     const { error } = await supabase
       .from('app_data')
       .upsert({
@@ -129,11 +187,11 @@ const uploadData = async (dataString) => {
         sync_version: syncVersion,
         last_modified: new Date(lastModified).toISOString()
       })
-    
+
     if (error) {
       throw new Error(error.message)
     }
-    
+
     return { success: true }
   } catch (error) {
     console.error('上传数据失败:', error)
@@ -143,24 +201,24 @@ const uploadData = async (dataString) => {
 
 const downloadData = async () => {
   try {
-    const { data: { user } } = await supabase.auth.getUser()
+    const user = getCurrentUser()
     if (!user) {
       throw new Error('用户未登录')
     }
-    
+
     const { data, error } = await supabase
       .from('app_data')
       .select('data, sync_version, last_modified')
       .eq('user_id', user.id)
       .single()
-    
+
     if (error) {
       if (error.code === 'PGRST116') {
         return { success: true, data: null, message: '云端暂无数据' }
       }
       throw new Error(error.message)
     }
-    
+
     return {
       success: true,
       data: JSON.stringify(data.data),
@@ -175,29 +233,29 @@ const downloadData = async () => {
 
 const checkForUpdates = async (localVersion, localLastModified) => {
   try {
-    const { data: { user } } = await supabase.auth.getUser()
+    const user = getCurrentUser()
     if (!user) {
       return { hasUpdate: false }
     }
-    
+
     const { data, error } = await supabase
       .from('app_data')
       .select('sync_version, last_modified')
       .eq('user_id', user.id)
       .single()
-    
+
     if (error) {
       if (error.code === 'PGRST116') {
         return { hasUpdate: false }
       }
       throw new Error(error.message)
     }
-    
+
     const cloudVersion = data.sync_version || 0
     const cloudLastModified = new Date(data.last_modified).getTime()
-    
+
     const hasUpdate = cloudVersion > localVersion || cloudLastModified > localLastModified
-    
+
     return {
       hasUpdate,
       cloudVersion,
@@ -214,19 +272,26 @@ let onDataChangedCallback = null
 
 const subscribeToChanges = (callback) => {
   onDataChangedCallback = callback
-  
+
   if (realtimeChannel) {
     realtimeChannel.unsubscribe()
   }
-  
+
+  const user = getCurrentUser()
+  if (!user) {
+    console.warn('用户未登录，无法订阅实时数据变化')
+    return null
+  }
+
   realtimeChannel = supabase
-    .channel('app_data_changes')
+    .channel(`app_data_changes_${user.id}`)
     .on(
       'postgres_changes',
       {
         event: '*',
         schema: 'public',
-        table: 'app_data'
+        table: 'app_data',
+        filter: `user_id=eq.${user.id}`
       },
       async (payload) => {
         if (payload.eventType === 'UPDATE' || payload.eventType === 'INSERT') {
@@ -242,7 +307,7 @@ const subscribeToChanges = (callback) => {
       }
     )
     .subscribe()
-  
+
   return realtimeChannel
 }
 
@@ -266,25 +331,38 @@ const handleAuthStateChange = (callback) => {
 }
 
 const initializeAuth = async () => {
-  const savedSession = getSavedSession()
-  if (savedSession) {
-    try {
-      await supabase.auth.setSession(savedSession)
-    } catch (error) {
-      console.error('恢复会话失败:', error)
-      clearSession()
+  try {
+    const savedSession = getSavedSession()
+    if (savedSession) {
+      try {
+        const { error } = await supabase.auth.setSession(savedSession)
+        if (error) {
+          console.error('恢复会话失败:', error)
+          clearSession()
+        }
+      } catch (error) {
+        console.error('恢复会话失败:', error)
+        clearSession()
+      }
     }
-  }
-  
-  const { data: { session } } = await supabase.auth.getSession()
-  if (session) {
-    saveSession(session)
+
+    const { data, error } = await supabase.auth.getSession()
+    if (error) {
+      console.error('获取会话失败:', error)
+      return
+    }
+    if (data.session) {
+      saveSession(data.session)
+    }
+  } catch (error) {
+    console.error('初始化认证失败:', error)
   }
 }
 
 export const supabaseSync = {
   signInWithEmail,
   signUpWithEmail,
+  resendConfirmationEmail,
   signOut,
   getCurrentUser,
   isLoggedIn,

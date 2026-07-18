@@ -205,8 +205,6 @@ const navigateTo = (path) => {
 const confirmLogout = () => {
   showLogoutConfirm.value = false
   userStore.logout()
-  localStorage.clear()
-  window.location.href = '/#/login'
 }
 </script>
 

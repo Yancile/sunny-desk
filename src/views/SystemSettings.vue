@@ -223,6 +223,12 @@
               <i class="layui-icon layui-icon-warning"></i>
               <span>{{ loginError }}</span>
             </div>
+            <div v-if="needsEmailConfirmation" class="email-confirmation">
+              <button class="sync-btn resend-btn" @click="handleResendConfirmation">
+                <i class="layui-icon layui-icon-mail"></i>
+                重新发送验证邮件
+              </button>
+            </div>
           </div>
 
           <div v-else class="sync-status">
@@ -359,6 +365,7 @@ const currentTheme = ref(appStore.currentTheme)
 const isRegisterMode = ref(false)
 const isLoggingIn = ref(false)
 const loginError = ref('')
+const needsEmailConfirmation = ref(false)
 
 const loginForm = reactive({
   email: '',
@@ -436,6 +443,7 @@ const resetSettings = () => {
 const toggleRegisterMode = () => {
   isRegisterMode.value = !isRegisterMode.value
   loginError.value = ''
+  needsEmailConfirmation.value = false
 }
 
 const handleSubmit = async () => {
@@ -446,6 +454,7 @@ const handleSubmit = async () => {
 
   isLoggingIn.value = true
   loginError.value = ''
+  needsEmailConfirmation.value = false
 
   try {
     const result = isRegisterMode.value
@@ -453,16 +462,36 @@ const handleSubmit = async () => {
       : await syncStore.login(loginForm.email, loginForm.password)
 
     if (result.success) {
-      layer.msg(isRegisterMode.value ? '注册成功' : '登录成功', { icon: 1 })
-      loginForm.email = ''
-      loginForm.password = ''
+      layer.msg(result.message || (isRegisterMode.value ? '注册成功' : '登录成功'), { icon: 1 })
+      if (!result.needsConfirmation) {
+        loginForm.email = ''
+        loginForm.password = ''
+      } else {
+        needsEmailConfirmation.value = true
+      }
     } else {
       loginError.value = result.message || (isRegisterMode.value ? '注册失败' : '登录失败')
+      if (result.needsConfirmation) {
+        needsEmailConfirmation.value = true
+      }
     }
   } catch (error) {
     loginError.value = error.message
   } finally {
     isLoggingIn.value = false
+  }
+}
+
+const handleResendConfirmation = async () => {
+  if (!loginForm.email) {
+    layer.msg('请输入邮箱地址', { icon: 5 })
+    return
+  }
+  const result = await syncStore.resendConfirmation(loginForm.email)
+  if (result.success) {
+    layer.msg(result.message, { icon: 1 })
+  } else {
+    layer.msg(result.message, { icon: 5 })
   }
 }
 
@@ -1337,6 +1366,23 @@ onMounted(() => {
 .switch-btn:hover {
   border-color: var(--primary-color, #1e4d7b);
   color: var(--primary-color, #1e4d7b);
+}
+
+.resend-btn {
+  background: color-mix(in srgb, var(--primary-color, #1e4d7b) 10%, transparent);
+  border: 1px solid var(--primary-color, #1e4d7b);
+  color: var(--primary-color, #1e4d7b);
+  width: 100%;
+  justify-content: center;
+  padding: 10px 24px;
+}
+
+.resend-btn:hover {
+  background: color-mix(in srgb, var(--primary-color, #1e4d7b) 20%, transparent);
+}
+
+.email-confirmation {
+  margin-top: 12px;
 }
 
 .login-error {

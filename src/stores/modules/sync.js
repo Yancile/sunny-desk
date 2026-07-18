@@ -62,7 +62,7 @@ export const useSyncStore = defineStore('sync', () => {
               if (showNotification) {
                 try {
                   layer.msg('数据同步成功', { icon: 1 })
-                } catch (e) {}
+                } catch (e) { }
               }
               return { success: true, message: '数据下载成功' }
             } else {
@@ -199,7 +199,7 @@ export const useSyncStore = defineStore('sync', () => {
     const result = await supabaseSync.signInWithEmail(email, password)
     if (result.success) {
       updateLoginStatus()
-      await syncIfNeeded()
+      await handlePostLoginSync()
       startRealtimeSubscription()
     }
     return result
@@ -207,10 +207,59 @@ export const useSyncStore = defineStore('sync', () => {
 
   const register = async (email, password) => {
     const result = await supabaseSync.signUpWithEmail(email, password)
-    if (result.success) {
+    if (result.success && !result.needsConfirmation) {
       updateLoginStatus()
+      await handlePostLoginSync()
+      startRealtimeSubscription()
     }
     return result
+  }
+
+  const handlePostLoginSync = async () => {
+    try {
+      const downloadResult = await supabaseSync.downloadData()
+      if (downloadResult.success && downloadResult.data) {
+        const localData = dataManager.getData()
+        const localVersion = localData.syncVersion || 0
+        const cloudVersion = downloadResult.syncVersion || 0
+
+        if (cloudVersion > localVersion) {
+          const success = dataManager.importData(downloadResult.data)
+          if (success) {
+            lastSyncTime.value = new Date().toLocaleString('zh-CN')
+            dataManager.sync.setLastSyncTime(lastSyncTime.value)
+            cloudSyncVersion.value = cloudVersion
+            hasNewData.value = false
+          }
+        }
+      } else if (downloadResult.success && !downloadResult.data) {
+        await uploadIfCloudEmpty()
+      }
+    } catch (error) {
+      console.log('登录后同步失败:', error)
+    }
+  }
+
+  const resendConfirmation = async (email) => {
+    return await supabaseSync.resendConfirmationEmail(email)
+  }
+
+  const uploadIfCloudEmpty = async () => {
+    try {
+      const downloadResult = await supabaseSync.downloadData()
+      if (downloadResult.success && !downloadResult.data) {
+        const localData = dataManager.getData()
+        const hasLocalData = Object.keys(localData).some(key => {
+          const value = localData[key]
+          return Array.isArray(value) && value.length > 0
+        })
+        if (hasLocalData) {
+          await startSync('upload', false)
+        }
+      }
+    } catch (error) {
+      console.log('检查云端数据失败:', error)
+    }
   }
 
   const logout = async () => {
@@ -250,8 +299,6 @@ export const useSyncStore = defineStore('sync', () => {
     }
   }
 
-  updateLoginStatus()
-
   return {
     syncing,
     lastSyncTime,
@@ -273,6 +320,7 @@ export const useSyncStore = defineStore('sync', () => {
     checkCloudDataOnStartup,
     login,
     register,
+    resendConfirmation,
     logout,
     clearError,
     dismissNewData,
